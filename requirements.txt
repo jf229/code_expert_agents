@@ -1,0 +1,29 @@
+# --- Consolidated Dependencies for All Prototypes ---
+
+# Core LangChain and application libraries
+langchain
+fastapi
+uvicorn
+python-dotenv
+pyyaml
+gitpython
+langchain-community
+requests
+tqdm
+networkx
+
+# For the Graph-Based Retrieval prototype
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-typescript
+tree-sitter-go
+tree-sitter-rust
+tree-sitter-swift
+tree-sitter-java
+tree-sitter-cpp
+tree-sitter-c-sharp
+tree-sitter-ruby
+tree-sitter-php
+
+# Note: flashrank is not included as it was part of a previous, less effective strategy.

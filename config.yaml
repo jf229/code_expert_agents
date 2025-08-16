@@ -1,0 +1,41 @@
+# --- Global Configuration for RAG Agent Prototypes ---
+
+# 1. Repository Settings
+# Define the repository to be analyzed.
+# 'local_repo_path' is the absolute path to the repository on your local machine.
+# 'repository_url' is used for cloning if the local path is not found (not currently implemented in all prototypes).
+repository:
+  local_path: "/Users/jcrissey/working/code_arch_agents/code_expert_agents/repo"
+  # remote_url: "https://github.com/jonathanalexander229/bikecheck"
+
+# 2. Language Model (LLM) Provider Settings
+# Choose the provider for generating answers.
+# provider: "ollama" or "wca"
+llm:
+  provider: "wca"
+  # Model name for the Ollama provider (e.g., "granite3.2:8b")
+  ollama_model: "granite3.2:8b"
+
+# 3. Embedding Model Settings
+# Define the model used for creating vector embeddings.
+# This is always local via Ollama to keep your code private during indexing.
+embeddings:
+  model: "nomic-embed-text"
+
+# 4. Retrieval Settings
+# Configure the retrieval strategies for the different prototypes.
+retrieval:
+  # For Top-K and Multi-Representation (specific query) prototypes
+  top_k: 5
+  # For Graph-Based retrieval, you can specify a query to run
+  graph_query: "explain the LoginViewModel"
+
+# 5. Data Storage Paths
+# Defines where the intermediate data for the prototypes is stored.
+# Paths are relative to the root of the project.
+storage:
+  vector_store: "vector_store"
+  doc_store: "docstore.pkl"
+  raw_docs: "raw_documents.pkl"
+  code_graph: "code_graph.gpickle"
+  multi_representations: "multi_representations.pkl"
