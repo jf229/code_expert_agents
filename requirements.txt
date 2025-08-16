@@ -15,6 +15,11 @@ requests
 tqdm
 networkx
 
+# LLM Provider APIs
+openai
+anthropic
+google-generativeai
+
 # For the Graph-Based Retrieval prototype
 tree-sitter
 tree-sitter-python

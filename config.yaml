@@ -5,16 +5,25 @@
 # No hardcoded paths - dynamic repository support
 repository:
   # Default fallback if no repo specified (can be empty)
-  # local_path: ""
+  local_path: "/home/clutchcoder/working/schwab_streaming_options"
   # remote_url: ""
 
 # 2. Language Model (LLM) Provider Settings
 # Choose the provider for generating answers.
-# provider: "ollama" or "wca"
+# Options: "ollama", "openai", "claude", "gemini", "wca"
 llm:
   provider: "ollama"
-  # Model name for the Ollama provider (e.g., "granite3.2:8b")
-  ollama_model: "granite3.2:8b"
+  
+  # Provider-specific model settings
+  models:
+    ollama: "granite3.2:8b"
+    openai: "gpt-4"
+    claude: "claude-3-sonnet-20240229"
+    gemini: "gemini-pro"
+  
+  # Generation parameters
+  temperature: 0.1
+  max_tokens: 4000
 
 # 3. Embedding Model Settings
 # Define the model used for creating vector embeddings.

@@ -2,24 +2,17 @@
 .env*
 !/.env.example
 
-# Local code repositories
-/repo/
-/wca-api/
-
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Data and state files
+# Generated data and state files
 *.pkl
 *.gpickle
-/retrieval_prototypes/**/vector_store/
-/retrieval_prototypes/**/code_graph.gpickle
-/retrieval_prototypes/**/multi_representations.pkl
-/retrieval_prototypes/**/docstore.pkl
-/retrieval_prototypes/**/raw_documents.pkl
+/vector_store/
+chroma.sqlite3
 
 # IDE and OS files
 .vscode/

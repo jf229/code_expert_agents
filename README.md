@@ -32,12 +32,27 @@ This project contains four distinct prototypes for a RAG-based (Retrieval-Augmen
 pip install -r requirements.txt
 ```
 
-**Configure API Key (if using WCA):** Create a `.env` file:
+**Configure API Keys:** Create a `.env` file with your chosen provider's API key:
 ```bash
-WCA_API_KEY=YOUR_API_KEY_HERE
+# For OpenAI
+OPENAI_API_KEY=your_openai_api_key_here
+
+# For Claude (Anthropic)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# For Gemini (Google)
+GOOGLE_API_KEY=your_google_api_key_here
+
+# For WCA (Watson Code Assistant)
+WCA_API_KEY=your_wca_api_key_here
 ```
 
-**Choose Provider:** In `config.yaml`, set `llm.provider` to `"ollama"` or `"wca"`.
+**Choose Provider:** In `config.yaml`, set `llm.provider` to one of:
+- `"ollama"` (local, free)
+- `"openai"` (GPT-4, GPT-3.5)
+- `"claude"` (Claude 3 Opus, Sonnet, Haiku)
+- `"gemini"` (Gemini Pro)
+- `"wca"` (Watson Code Assistant)
 
 **Repository Configuration:** You can specify repositories in three ways:
 1. **Command line (recommended)**: `--repo /path/to/your/repo`
