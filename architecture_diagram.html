@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Code Expert Agents - Architecture & Data Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            padding: 10px;
+            color: #1a1a1a;
+            overflow-x: auto;
+        }
+
+        .diagram-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+
+        .layer {
+            margin-bottom: 12px;
+        }
+
+        .layer-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        /* Box styles */
+        .box {
+            display: inline-block;
+            border-radius: 6px;
+            border: 2px solid;
+            text-align: center;
+            vertical-align: top;
+            margin: 3px;
+            position: relative;
+        }
+
+        .box-title {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+
+        .box-subtitle {
+            font-size: 10px;
+            margin-bottom: 5px;
+        }
+
+        .box-content {
+            font-size: 9px;
+            line-height: 1.2;
+        }
+
+        /* Box types */
+        .shared-box {
+            background: #ecf0f1;
+            border-color: #bdc3c7;
+            color: #1a1a1a;
+            padding: 8px;
+        }
+
+        .process-box {
+            background: #9b59b6;
+            border-color: #8e44ad;
+            color: white;
+            padding: 8px;
+        }
+
+        .provider-box {
+            background: #27ae60;
+            border-color: #229954;
+            color: white;
+            padding: 8px;
+        }
+
+        .storage-box {
+            background: #f39c12;
+            border-color: #d68910;
+            color: white;
+            padding: 8px;
+        }
+
+        .agent-box {
+            background: #3498db;
+            border-color: #2980b9;
+            color: white;
+            padding: 12px;
+            width: 220px;
+            min-height: 120px;
+        }
+
+        /* Layouts */
+        .horizontal-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        .storage-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 8px 0;
+        }
+
+        /* Agent sub-components */
+        .agent-components {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+        .agent-component {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1a1a1a;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+        /* Arrows */
+        .arrow {
+            display: inline-block;
+            font-size: 32px;
+            color: #3498db;
+            margin: 0 5px;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        .data-arrow {
+            color: #e74c3c;
+            font-size: 32px;
+        }
+
+        /* Processing steps */
+        .process-steps {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .process-step {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 9px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        /* Legend */
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .legend-section {
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-size: 11px;
+        }
+
+        .legend-item {
+            margin: 2px 0;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .agents-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .storage-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .legend {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .diagram-container {
+                padding: 8px;
+            }
+            
+            .horizontal-flow {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .storage-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .agent-box {
+                width: 100%;
+            }
+            
+            .arrow {
+                font-size: 20px;
+            }
+            
+            .data-arrow {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="diagram-container">
+        <div class="title">RAG Code Expert Agents - Architecture & Data Flow</div>
+
+        <!-- Input & Data Ingestion Layer -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <div class="box shared-box">
+                    <div class="box-title">Repository</div>
+                    <div class="box-content">Source Code</div>
+                </div>
+                
+                <span class="arrow">→</span>
+                
+                <div class="box process-box">
+                    <div class="box-title">Data Ingestion</div>
+                    <div class="box-subtitle">data_ingestion.py</div>
+                    <div class="box-content">Repository Intelligence</div>
+                </div>
+                
+                <span class="arrow">→</span>
+                
+                <div class="box shared-box" style="width: 300px;">
+                    <div class="box-title">Shared Infrastructure</div>
+                    <div class="box-content">
+                        LLM Providers • WCA Service • Response Generator • Config Manager
+                    </div>
+                </div>
+                
+                <span class="arrow">→</span>
+                
+                <div class="box provider-box">
+                    <div class="box-title">LLM Providers</div>
+                    <div class="box-subtitle">Ollama (Local)</div>
+                    <div class="box-content">WCA/OpenAI/Claude</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw Documents -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <span class="arrow data-arrow">↓</span>
+            </div>
+            <div class="horizontal-flow">
+                <div class="box storage-box">
+                    <div class="box-title">Raw Documents</div>
+                    <div class="box-content">raw_documents.pkl</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Four Agent Approaches -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <span class="arrow data-arrow">↓</span>
+            </div>
+            <div class="agents-grid">
+                <div class="box agent-box">
+                    <div class="box-title">1. Top-K Retrieval</div>
+                    <div class="box-subtitle">Baseline RAG approach</div>
+                    <div class="agent-components">
+                        <div class="agent-component">Text Splitting</div>
+                        <div class="agent-component">Vector Store</div>
+                        <div class="agent-component">ParentDocumentRetriever</div>
+                    </div>
+                </div>
+
+                <div class="box agent-box">
+                    <div class="box-title">2. Iterate & Synthesize</div>
+                    <div class="box-subtitle">MapReduce approach</div>
+                    <div class="agent-components">
+                        <div class="agent-component">File Analysis</div>
+                        <div class="agent-component">Summarization</div>
+                        <div class="agent-component">Synthesis Chain</div>
+                    </div>
+                </div>
+
+                <div class="box agent-box">
+                    <div class="box-title">3. Graph-Based Retrieval</div>
+                    <div class="box-subtitle">Knowledge graph approach</div>
+                    <div class="agent-components">
+                        <div class="agent-component">Graph Builder</div>
+                        <div class="agent-component">NetworkX</div>
+                        <div class="agent-component">GraphRetriever</div>
+                    </div>
+                </div>
+
+                <div class="box agent-box">
+                    <div class="box-title">4. Multi-Representation</div>
+                    <div class="box-subtitle">Hybrid adaptive approach</div>
+                    <div class="agent-components">
+                        <div class="agent-component">Summaries</div>
+                        <div class="agent-component">Questions</div>
+                        <div class="agent-component">MultiVectorRetriever</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Layer -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <span class="arrow data-arrow">↓</span>
+            </div>
+            <div class="storage-grid">
+                <div class="box storage-box">
+                    <div class="box-title">Vector Storage</div>
+                    <div class="box-subtitle">Chroma DB</div>
+                    <div class="box-content">Ollama Embeddings<br>vector_store/</div>
+                </div>
+
+                <div class="box storage-box">
+                    <div class="box-title">Document Storage</div>
+                    <div class="box-subtitle">docstore.pkl</div>
+                    <div class="box-content">InMemoryStore</div>
+                </div>
+
+                <div class="box storage-box">
+                    <div class="box-title">Graph Storage</div>
+                    <div class="box-subtitle">code_graph.gpickle</div>
+                    <div class="box-content">NetworkX Graph</div>
+                </div>
+
+                <div class="box storage-box">
+                    <div class="box-title">Multi-Representations</div>
+                    <div class="box-subtitle">multi_representations.pkl</div>
+                    <div class="box-content">Summaries + Questions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Query Processing -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <span class="arrow">↓</span>
+            </div>
+            <div class="horizontal-flow">
+                <div class="box process-box" style="width: 600px;">
+                    <div class="box-title">Query Processing & Response Generation</div>
+                    <div class="process-steps">
+                        <div class="process-step">1. Question Classification</div>
+                        <div class="process-step">2. Retrieval Strategy</div>
+                        <div class="process-step">3. Context Formation</div>
+                        <div class="process-step">4. LLM Generation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Output -->
+        <div class="layer">
+            <div class="horizontal-flow">
+                <span class="arrow">↓</span>
+            </div>
+            <div class="horizontal-flow">
+                <div class="box shared-box" style="width: 250px;">
+                    <div class="box-title">Unified Response</div>
+                    <div class="box-content">Formatted Answer • Source References</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-section">
+                <div class="legend-title">Data Flow Legend</div>
+                <div class="legend-item"><span style="color: #3498db;">→</span> Process Flow</div>
+                <div class="legend-item"><span style="color: #e74c3c;">↓</span> Data Storage</div>
+                <div class="legend-item">Each agent implements a different retrieval strategy:</div>
+                <div class="legend-item">• <strong>Top-K:</strong> Fast similarity search (k=5 documents)</div>
+                <div class="legend-item">• <strong>Iterate:</strong> Process all files, synthesize comprehensive view</div>
+                <div class="legend-item">• <strong>Graph:</strong> NetworkX knowledge graph with entity relationships</div>
+                <div class="legend-item">• <strong>Multi-Rep:</strong> Adaptive strategy selection based on question type</div>
+            </div>
+
+            <div class="legend-section">
+                <div class="legend-title">Key Features</div>
+                <div class="legend-item">• Multi-provider LLM support (Ollama, WCA, OpenAI, Claude)</div>
+                <div class="legend-item">• Local embeddings for privacy (Ollama)</div>
+                <div class="legend-item">• Intelligent document filtering & repository analysis</div>
+                <div class="legend-item">• Unified response generation with source attribution</div>
+                <div class="legend-item">• Central configuration management</div>
+                <div class="legend-item">• Extensible plugin architecture</div>
+            </div>
+
+            <div class="legend-section">
+                <div class="legend-title">Best Use Cases</div>
+                <div class="legend-item"><strong>Top-K:</strong> Quick specific questions</div>
+                <div class="legend-item"><strong>Iterate:</strong> Full project overview</div>
+                <div class="legend-item"><strong>Graph:</strong> Entity relationships & dependencies</div>
+                <div class="legend-item"><strong>Multi-Rep:</strong> Adaptive analysis for varied question types</div>
+                <div class="legend-item"><br><strong>All agents share:</strong></div>
+                <div class="legend-item">• Central configuration (config.yaml)</div>
+                <div class="legend-item">• Shared services and infrastructure</div>
+                <div class="legend-item">• Consistent response formatting</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

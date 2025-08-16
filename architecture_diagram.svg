@@ -1,0 +1,225 @@
+<svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font: bold 18px 'Arial', sans-serif; fill: #1a1a1a; text-anchor: middle; }
+      .section-title { font: bold 14px 'Arial', sans-serif; fill: #1a1a1a; text-anchor: middle; }
+      .text { font: 12px 'Arial', sans-serif; fill: #1a1a1a; text-anchor: middle; }
+      .small-text { font: 11px 'Arial', sans-serif; fill: #1a1a1a; text-anchor: middle; }
+      .white-text { font: bold 14px 'Arial', sans-serif; fill: #ffffff; text-anchor: middle; }
+      .white-small { font: 11px 'Arial', sans-serif; fill: #ffffff; text-anchor: middle; }
+      .arrow { stroke: #3498db; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .data-flow { stroke: #e74c3c; stroke-width: 2; fill: none; marker-end: url(#arrowhead-red); stroke-dasharray: 5,5; }
+      .shared-box { fill: #ecf0f1; stroke: #bdc3c7; stroke-width: 2; }
+      .agent-box { fill: #3498db; stroke: #2980b9; stroke-width: 2; opacity: 0.9; }
+      .storage-box { fill: #f39c12; stroke: #d68910; stroke-width: 2; }
+      .provider-box { fill: #27ae60; stroke: #229954; stroke-width: 2; }
+      .process-box { fill: #9b59b6; stroke: #8e44ad; stroke-width: 2; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3498db" />
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="600" y="30" class="title">RAG Code Expert Agents - Architecture &amp; Data Flow</text>
+
+  <!-- Repository Input -->
+  <rect x="20" y="60" width="120" height="60" class="shared-box" rx="5"/>
+  <text x="80" y="85" class="section-title">Repository</text>
+  <text x="80" y="105" class="text">Source Code</text>
+
+  <!-- Central Data Ingestion -->
+  <rect x="180" y="60" width="140" height="60" class="process-box" rx="5"/>
+  <text x="250" y="80" class="white-text">Data Ingestion</text>
+  <text x="250" y="95" class="white-small">data_ingestion.py</text>
+  <text x="250" y="108" class="white-small">Repository Intelligence</text>
+
+  <!-- Shared Services Layer -->
+  <rect x="350" y="60" width="500" height="60" class="shared-box" rx="5"/>
+  <text x="600" y="80" class="section-title">Shared Infrastructure</text>
+  <text x="400" y="100" class="small-text">LLM Providers</text>
+  <text x="500" y="100" class="small-text">WCA Service</text>
+  <text x="620" y="100" class="small-text">Response Generator</text>
+  <text x="750" y="100" class="small-text">Config Manager</text>
+
+  <!-- LLM Providers -->
+  <rect x="880" y="60" width="120" height="60" class="provider-box" rx="5"/>
+  <text x="940" y="80" class="white-text">LLM Providers</text>
+  <text x="940" y="95" class="white-small">Ollama (Local)</text>
+  <text x="940" y="108" class="white-small">WCA/OpenAI/Claude</text>
+
+  <!-- Raw Documents Storage -->
+  <rect x="180" y="160" width="140" height="50" class="storage-box" rx="5"/>
+  <text x="250" y="180" class="white-text">Raw Documents</text>
+  <text x="250" y="195" class="white-small">raw_documents.pkl</text>
+
+  <!-- Four Agent Approaches -->
+  
+  <!-- Top-K Retrieval -->
+  <rect x="50" y="250" width="220" height="140" class="agent-box" rx="8"/>
+  <text x="160" y="275" class="white-text">1. Top-K Retrieval</text>
+  <text x="160" y="295" class="white-small">Baseline RAG approach</text>
+  
+  <rect x="60" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="100" y="324" class="small-text">Text Splitting</text>
+  
+  <rect x="150" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="190" y="324" class="small-text">Vector Store</text>
+  
+  <rect x="105" y="345" width="110" height="30" class="shared-box" rx="3"/>
+  <text x="160" y="364" class="small-text">ParentDocumentRetriever</text>
+
+  <!-- Iterate & Synthesize -->
+  <rect x="300" y="250" width="220" height="140" class="agent-box" rx="8"/>
+  <text x="410" y="275" class="white-text">2. Iterate &amp; Synthesize</text>
+  <text x="410" y="295" class="white-small">MapReduce approach</text>
+  
+  <rect x="310" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="350" y="324" class="small-text">File Analysis</text>
+  
+  <rect x="400" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="440" y="324" class="small-text">Summarization</text>
+  
+  <rect x="355" y="345" width="110" height="30" class="shared-box" rx="3"/>
+  <text x="410" y="364" class="small-text">Synthesis Chain</text>
+
+  <!-- Graph-Based Retrieval -->
+  <rect x="550" y="250" width="220" height="140" class="agent-box" rx="8"/>
+  <text x="660" y="275" class="white-text">3. Graph-Based Retrieval</text>
+  <text x="660" y="295" class="white-small">Knowledge graph approach</text>
+  
+  <rect x="560" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="600" y="324" class="small-text">Graph Builder</text>
+  
+  <rect x="650" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="690" y="324" class="small-text">NetworkX</text>
+  
+  <rect x="605" y="345" width="110" height="30" class="shared-box" rx="3"/>
+  <text x="660" y="364" class="small-text">GraphRetriever</text>
+
+  <!-- Multi-Representation -->
+  <rect x="800" y="250" width="220" height="140" class="agent-box" rx="8"/>
+  <text x="910" y="275" class="white-text">4. Multi-Representation</text>
+  <text x="910" y="295" class="white-small">Hybrid adaptive approach</text>
+  
+  <rect x="810" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="850" y="324" class="small-text">Summaries</text>
+  
+  <rect x="900" y="305" width="80" height="30" class="shared-box" rx="3"/>
+  <text x="940" y="324" class="small-text">Questions</text>
+  
+  <rect x="855" y="345" width="110" height="30" class="shared-box" rx="3"/>
+  <text x="910" y="364" class="small-text">MultiVectorRetriever</text>
+
+  <!-- Storage Layer -->
+  <rect x="50" y="430" width="200" height="80" class="storage-box" rx="5"/>
+  <text x="150" y="450" class="white-text">Vector Storage</text>
+  <text x="90" y="470" class="white-small">Chroma DB</text>
+  <text x="210" y="470" class="white-small">Ollama Embeddings</text>
+  <text x="150" y="490" class="white-small">vector_store/</text>
+
+  <rect x="280" y="430" width="160" height="80" class="storage-box" rx="5"/>
+  <text x="360" y="450" class="white-text">Document Storage</text>
+  <text x="360" y="470" class="white-small">docstore.pkl</text>
+  <text x="360" y="485" class="white-small">InMemoryStore</text>
+
+  <rect x="470" y="430" width="160" height="80" class="storage-box" rx="5"/>
+  <text x="550" y="450" class="white-text">Graph Storage</text>
+  <text x="550" y="470" class="white-small">code_graph.gpickle</text>
+  <text x="550" y="485" class="white-small">NetworkX Graph</text>
+
+  <rect x="660" y="430" width="180" height="80" class="storage-box" rx="5"/>
+  <text x="750" y="450" class="white-text">Multi-Representations</text>
+  <text x="750" y="470" class="white-small">multi_representations.pkl</text>
+  <text x="750" y="485" class="white-small">Summaries + Questions</text>
+
+  <!-- Processing Flow -->
+  <rect x="200" y="550" width="800" height="80" class="process-box" rx="5"/>
+  <text x="600" y="575" class="white-text">Query Processing &amp; Response Generation</text>
+  <text x="300" y="595" class="white-small">1. Question Classification</text>
+  <text x="500" y="595" class="white-small">2. Retrieval Strategy</text>
+  <text x="700" y="595" class="white-small">3. Context Formation</text>
+  <text x="900" y="595" class="white-small">4. LLM Generation</text>
+
+  <!-- Final Output -->
+  <rect x="450" y="670" width="300" height="60" class="shared-box" rx="5"/>
+  <text x="600" y="690" class="section-title">Unified Response</text>
+  <text x="500" y="710" class="small-text">Formatted Answer</text>
+  <text x="700" y="710" class="small-text">Source References</text>
+
+  <!-- Data Flow Arrows -->
+  
+  <!-- Repository to Data Ingestion -->
+  <line x1="140" y1="90" x2="180" y2="90" class="arrow"/>
+  
+  <!-- Data Ingestion to Shared Services -->
+  <line x1="320" y1="90" x2="350" y2="90" class="arrow"/>
+  
+  <!-- Shared Services to LLM Providers -->
+  <line x1="850" y1="90" x2="880" y2="90" class="arrow"/>
+  
+  <!-- Data Ingestion to Raw Documents -->
+  <line x1="250" y1="120" x2="250" y2="160" class="data-flow"/>
+  
+  <!-- Raw Documents to each agent -->
+  <line x1="250" y1="210" x2="160" y2="250" class="data-flow"/>
+  <line x1="250" y1="210" x2="410" y2="250" class="data-flow"/>
+  <line x1="250" y1="210" x2="660" y2="250" class="data-flow"/>
+  <line x1="250" y1="210" x2="910" y2="250" class="data-flow"/>
+  
+  <!-- Agents to storage -->
+  <line x1="160" y1="390" x2="150" y2="430" class="data-flow"/>
+  <line x1="410" y1="390" x2="360" y2="430" class="data-flow"/>
+  <line x1="660" y1="390" x2="550" y2="430" class="data-flow"/>
+  <line x1="910" y1="390" x2="750" y2="430" class="data-flow"/>
+  
+  <!-- Storage to Processing -->
+  <line x1="150" y1="510" x2="300" y2="550" class="arrow"/>
+  <line x1="360" y1="510" x2="450" y2="550" class="arrow"/>
+  <line x1="550" y1="510" x2="650" y2="550" class="arrow"/>
+  <line x1="750" y1="510" x2="850" y2="550" class="arrow"/>
+  
+  <!-- Processing to Output -->
+  <line x1="600" y1="630" x2="600" y2="670" class="arrow"/>
+
+  <!-- Key/Legend -->
+  <rect x="50" y="750" width="400" height="120" class="shared-box" rx="5"/>
+  <text x="250" y="770" class="section-title">Data Flow Legend</text>
+  
+  <line x1="70" y1="790" x2="120" y2="790" class="arrow"/>
+  <text x="140" y="795" class="small-text">Process Flow</text>
+  
+  <line x1="70" y1="810" x2="120" y2="810" class="data-flow"/>
+  <text x="140" y="815" class="small-text">Data Storage</text>
+  
+  <text x="70" y="835" class="small-text">Each agent implements a different retrieval strategy:</text>
+  <text x="70" y="850" class="small-text">• Top-K: Fast similarity search (k=5 documents)</text>
+  <text x="70" y="865" class="small-text">• Iterate: Process all files, synthesize comprehensive view</text>
+
+  <!-- Features Box -->
+  <rect x="500" y="750" width="400" height="120" class="shared-box" rx="5"/>
+  <text x="700" y="770" class="section-title">Key Features</text>
+  
+  <text x="520" y="790" class="small-text">• Multi-provider LLM support (Ollama, WCA, OpenAI, Claude)</text>
+  <text x="520" y="805" class="small-text">• Local embeddings for privacy (Ollama)</text>
+  <text x="520" y="820" class="small-text">• Intelligent document filtering &amp; repository analysis</text>
+  <text x="520" y="835" class="small-text">• Graph: NetworkX knowledge graph with entity relationships</text>
+  <text x="520" y="850" class="small-text">• Multi-Rep: Adaptive strategy selection based on question type</text>
+  <text x="520" y="865" class="small-text">• Unified response generation with source attribution</text>
+
+  <!-- Use Cases -->
+  <rect x="950" y="750" width="230" height="120" class="shared-box" rx="5"/>
+  <text x="1065" y="770" class="section-title">Best Use Cases</text>
+  
+  <text x="960" y="790" class="small-text">Top-K: Quick specific questions</text>
+  <text x="960" y="805" class="small-text">Iterate: Full project overview</text>
+  <text x="960" y="820" class="small-text">Graph: Entity relationships</text>
+  <text x="960" y="835" class="small-text">Multi-Rep: Adaptive analysis</text>
+  
+  <text x="960" y="855" class="small-text">All agents share:</text>
+  <text x="960" y="870" class="small-text">• Central configuration</text>
+
+</svg>

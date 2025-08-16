@@ -41,7 +41,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain.schema import Document
 
 # Import shared services and central data ingestion
-from shared_services import WCAService, ResponseGenerator, pull_ollama_model, load_config
+from shared_services import WCAService, ResponseGenerator, load_config, setup_and_pull_models
 from data_ingestion import main as data_ingestion_main
 
 
@@ -53,26 +53,53 @@ class GraphBuilder:
         self.storage_config = config["storage"]
     
     def build_graph(self, repo_path):
-        """Build a simple knowledge graph from repository source code."""
+        """Build a knowledge graph from repository source code."""
+        print("Detecting repository language...")
+        
+        # Detect the primary language of the repository
+        language_counts = {}
+        for root, dirs, files in os.walk(repo_path):
+            # Skip hidden directories
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            
+            for file in files:
+                if file.endswith('.py'):
+                    language_counts['python'] = language_counts.get('python', 0) + 1
+                elif file.endswith('.swift'):
+                    language_counts['swift'] = language_counts.get('swift', 0) + 1
+                elif file.endswith(('.js', '.ts')):
+                    language_counts['javascript'] = language_counts.get('javascript', 0) + 1
+        
+        # Determine primary language
+        if not language_counts:
+            print("No source files found.")
+            return nx.DiGraph()
+        
+        primary_language = max(language_counts, key=language_counts.get)
+        print(f"Detected primary language: {primary_language} ({language_counts[primary_language]} files)")
+        
+        # Use appropriate parser
+        if primary_language == 'swift' and TREE_SITTER_AVAILABLE:
+            return self._build_swift_graph(repo_path)
+        else:
+            # For Python and other languages, use the basic file graph with entity extraction
+            return self._build_basic_file_graph(repo_path)
+    
+    def _build_swift_graph(self, repo_path):
+        """Build graph specifically for Swift repositories."""
         G = nx.DiGraph()
         
-        if not TREE_SITTER_AVAILABLE:
-            print("Tree-sitter not available. Building basic file graph...")
-            return self._build_basic_file_graph(repo_path)
-        
-        # Currently supports Swift - can be extended for other languages
         try:
             SWIFT_LANGUAGE = Language(swift_language_capsule())
             parser = Parser()
             parser.language = SWIFT_LANGUAGE
             
-            print("Scanning for Swift files...")
+            print("Building Swift knowledge graph...")
             swift_files = [
                 os.path.join(root, file) 
                 for root, _, files in os.walk(repo_path) 
                 for file in files if file.endswith('.swift')
             ]
-            print(f"Found {len(swift_files)} Swift files.")
             
             for file_path in swift_files:
                 G.add_node(file_path, type='file')
@@ -121,13 +148,52 @@ class GraphBuilder:
         source_extensions = {'.py', '.js', '.ts', '.java', '.cpp', '.c', '.h', '.swift', '.kt', '.rb', '.go', '.rs'}
         
         for root, dirs, files in os.walk(repo_path):
+            # Skip hidden directories and common ignore patterns
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in {'__pycache__', 'node_modules', 'venv', '.venv'}]
+            
             for file in files:
                 if any(file.endswith(ext) for ext in source_extensions):
                     file_path = os.path.join(root, file)
-                    G.add_node(file_path, type='file', name=file)
+                    relative_path = os.path.relpath(file_path, repo_path)
+                    
+                    # Add file node with relative path for cleaner display
+                    G.add_node(file_path, type='file', name=file, relative_path=relative_path)
+                    
+                    # For Python files, try to extract basic class/function info
+                    if file.endswith('.py'):
+                        self._add_python_entities(G, file_path, relative_path)
         
-        print(f"Built basic graph with {G.number_of_nodes()} file nodes.")
+        print(f"Built basic graph with {G.number_of_nodes()} file nodes and {G.number_of_edges()} edges.")
         return G
+    
+    def _add_python_entities(self, graph, file_path, relative_path):
+        """Add Python classes and functions to the graph using simple regex."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            import re
+            
+            # Find class definitions
+            class_pattern = r'^class\s+(\w+)'
+            for match in re.finditer(class_pattern, content, re.MULTILINE):
+                class_name = match.group(1)
+                class_id = f"{file_path}::{class_name}"
+                graph.add_node(class_id, type='class', name=class_name, file=file_path, relative_path=relative_path)
+                graph.add_edge(file_path, class_id, type='contains')
+            
+            # Find function definitions (not inside classes for simplicity)
+            func_pattern = r'^def\s+(\w+)'
+            for match in re.finditer(func_pattern, content, re.MULTILINE):
+                func_name = match.group(1)
+                if not func_name.startswith('_'):  # Skip private functions
+                    func_id = f"{file_path}::{func_name}"
+                    graph.add_node(func_id, type='function', name=func_name, file=file_path, relative_path=relative_path)
+                    graph.add_edge(file_path, func_id, type='contains')
+        
+        except Exception as e:
+            # Silently skip files that can't be processed
+            pass
     
     def save_graph(self, graph):
         """Save the graph to disk."""
@@ -142,9 +208,10 @@ class GraphBuilder:
 class GraphRetriever(BaseRetriever):
     """Custom retriever that fetches documents based on graph search."""
     
-    def __init__(self, graph):
-        super().__init__()
-        self.graph = graph
+    graph: object = None  # Declare as a Pydantic field
+    
+    def __init__(self, graph, **kwargs):
+        super().__init__(graph=graph, **kwargs)
     
     def _get_relevant_documents(self, query: str):
         """Get relevant documents based on graph search."""
@@ -193,21 +260,6 @@ class GraphBasedAgent:
         self.provider = self.llm_config.get("provider")
         self.response_generator = ResponseGenerator(prototype_name="Graph-Based Retrieval")
     
-    def _setup_provider(self):
-        """Setup LLM provider (WCA or Ollama)."""
-        if self.provider == "wca":
-            api_key = os.environ.get("WCA_API_KEY")
-            if not api_key:
-                raise ValueError("WCA_API_KEY not found in environment variables.")
-            return WCAService(api_key=api_key)
-        else:
-            return ChatOllama(
-                model=self.llm_config["ollama_model"],
-                temperature=0,
-                top_k=40,
-                top_p=0.9
-            )
-    
     def _load_graph(self):
         """Load the knowledge graph from disk."""
         graph_path = self.storage_config["code_graph"]
@@ -218,57 +270,6 @@ class GraphBasedAgent:
         
         with open(graph_path, "rb") as f:
             return pickle.load(f)
-    
-    def _create_qa_chain(self, retriever):
-        """Create the QA chain for the agent."""
-        if self.provider == "wca":
-            # For WCA, we'll handle this differently in the run method
-            return retriever
-        else:
-            # For Ollama, create a proper chain
-            llm = self._setup_provider()
-            
-            # Create prompt template
-            template = """You are a senior software architect. Based on the following set of retrieved source files, produce a comprehensive analysis of the project that directly answers the user's question.
-
-Retrieved Documents (Context):
-{context}
-
-User's Question:
-{question}
-
-Architectural Analysis:"""
-            
-            prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-            
-            # Create document chain
-            combine_docs_chain = StuffDocumentsChain(
-                llm_chain=LLMChain(llm=llm, prompt=prompt),
-                document_variable_name="context"
-            )
-            
-            # Create question generator
-            question_generator = LLMChain(
-                llm=llm,
-                prompt=PromptTemplate(
-                    template="Given the following conversation and a follow up question, "
-                    "rephrase the follow up question to be a standalone question.\n\n"
-                    "Chat History:\n{chat_history}\n"
-                    "Follow Up Input: {question}\n"
-                    "Standalone question:",
-                    input_variables=["chat_history", "question"]
-                )
-            )
-            
-            # Create conversational retrieval chain
-            qa = ConversationalRetrievalChain(
-                retriever=retriever,
-                combine_docs_chain=combine_docs_chain,
-                question_generator=question_generator,
-                return_source_documents=True,
-            )
-            
-            return qa
     
     def build_graph(self):
         """Build the knowledge graph."""
@@ -315,38 +316,19 @@ Architectural Analysis:"""
         
         # Step 3: Agent Orchestration
         print("--- Agent Orchestration ---")
-        if self.provider == "wca":
-            # For WCA, use the service directly
-            wca_service = self._setup_provider()
-            
-            # Get relevant documents from graph
-            docs = retriever.invoke(question)
-            print(f"Retrieved {len(docs)} documents from graph search.")
-            
-            if not docs:
-                print("No relevant documents found for the query.")
-                return
-            
-            # Get analysis from WCA
-            print("Sending query to WCA...")
-            try:
-                wca_response = wca_service.get_architectural_analysis(question, docs)
-                
-                # Format response for consistency
-                qa_result = {
-                    "question": question,
-                    "answer": wca_response.get("choices", [{}])[0].get("message", {}).get("content", "No response"),
-                    "source_documents": docs
-                }
-                
-                self.response_generator.generate_response(qa_result)
-                
-            except Exception as e:
-                print(f"Error calling WCA API: {e}")
-        else:
-            # For Ollama, use the chain
-            qa_chain = self._create_qa_chain(retriever)
-            self.response_generator.process_query(qa_chain, question)
+        
+        # Get relevant documents from graph
+        docs = retriever.invoke(question)
+        print(f"Retrieved {len(docs)} documents from graph search.")
+        
+        if not docs:
+            print("No relevant documents found for the query.")
+            return
+        
+        # Use unified response generator (same as other agents)
+        from shared_services import UnifiedResponseGenerator
+        unified_generator = UnifiedResponseGenerator(self.config, prototype_name="Graph-Based Retrieval")
+        unified_generator.generate_response_with_context(question, docs)
         
         print("--- System Finished ---")
 
@@ -356,13 +338,22 @@ def main():
     parser = argparse.ArgumentParser(description="RAG-based Code Expert Agent (Graph-Based Retrieval)")
     parser.add_argument("question", nargs="?", type=str, help="The question to ask the agent.")
     parser.add_argument("--build-graph", action="store_true", help="Build the knowledge graph")
+    parser.add_argument("--repo", help="Repository path to analyze")
     args = parser.parse_args()
     
     # Load configuration and pull models if needed
     config = load_config()
     
+    # Set repo path if provided
+    if args.repo:
+        config["repository"]["local_path"] = args.repo
+        print(f"Using repository: {args.repo}")
+    
     # Create agent
     agent = GraphBasedAgent()
+    # Update agent's config with the repo path if provided
+    if args.repo:
+        agent.config["repository"]["local_path"] = args.repo
     
     if args.build_graph:
         # Build the knowledge graph
@@ -378,12 +369,8 @@ def main():
         print("   or: python graph_based_retrieval.py --build-graph")
         return
     
-    # Pull models if needed
-    llm_model = config["llm"]["ollama_model"]
-    embedding_model = config["embeddings"]["model"]
-    
-    pull_ollama_model(llm_model)
-    pull_ollama_model(embedding_model)
+    # Setup and pull required models
+    setup_and_pull_models(config)
     
     # Run the agent
     agent.run(args.question)

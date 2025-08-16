@@ -23,18 +23,37 @@ class LLMProvider(ABC):
 class OpenAIProvider(LLMProvider):
     """OpenAI API provider."""
     
-    def __init__(self, model: str = "gpt-4", api_key: str = None):
+    def __init__(self, model: str = "gpt-4", api_key: str = None, extra_headers: dict = None):
         self.model = model
-        self.client = openai.OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+        self.extra_headers = extra_headers or {}
+        
+        # Create client with privacy headers
+        headers = {}
+        headers.update(self.extra_headers)
+        
+        self.client = openai.OpenAI(
+            api_key=api_key or os.getenv("OPENAI_API_KEY"),
+            default_headers=headers
+        )
     
     def generate_response(self, prompt: str, **kwargs) -> str:
         """Generate response using OpenAI API."""
         try:
+            # Add privacy-aware parameters
+            extra_params = {}
+            
+            # Add no-training parameter if supported and requested
+            if self.extra_headers.get("OpenAI-Opt-Out") == "true":
+                # OpenAI doesn't currently have a direct no-training parameter,
+                # but the header indicates intent for future compliance
+                pass
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=kwargs.get("temperature", 0.1),
-                max_tokens=kwargs.get("max_tokens", 4000)
+                max_tokens=kwargs.get("max_tokens", 4000),
+                **extra_params
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -143,5 +162,12 @@ def get_llm_provider(provider_type: str, **kwargs) -> LLMProvider:
     
     if provider_type not in providers:
         raise ValueError(f"Unsupported provider: {provider_type}")
+    
+    # Extract privacy headers if provided
+    extra_headers = kwargs.pop("extra_headers", None)
+    
+    # Add extra_headers parameter for external providers
+    if provider_type in ["openai", "claude", "gemini"] and extra_headers:
+        kwargs["extra_headers"] = extra_headers
     
     return providers[provider_type](**kwargs)

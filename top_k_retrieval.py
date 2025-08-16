@@ -31,7 +31,7 @@ from langchain.storage import InMemoryStore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Import shared services and central data ingestion
-from shared_services import WCAService, ResponseGenerator, pull_ollama_model, load_config
+from shared_services import WCAService, ResponseGenerator, load_config, setup_and_pull_models
 from data_ingestion import main as data_ingestion_main
 
 
@@ -72,6 +72,9 @@ class TopKVectorizer:
             docstore=store,
             child_splitter=child_splitter,
         )
+        
+        # Configure search kwargs for top-k
+        retriever.search_kwargs = {"k": self.retrieval_config["top_k"]}
         
         print("Adding documents to the retriever...")
         retriever.add_documents(docs, ids=None)
@@ -289,7 +292,7 @@ Architectural Analysis:"""
         
         # Get top-k documents
         top_k = self.config["retrieval"]["top_k"]
-        docs = retriever.invoke(question, k=top_k)
+        docs = retriever.invoke(question)
         print(f"Retrieved {len(docs)} documents.")
         
         if not docs:
@@ -309,22 +312,29 @@ def main():
     parser = argparse.ArgumentParser(description="RAG-based Code Expert Agent (Top-K Retrieval)")
     parser.add_argument("question", type=str, help="The question to ask the agent.")
     parser.add_argument("--repo", help="Repository path to analyze")
+    parser.add_argument("--privacy", action="store_true", help="Enable privacy mode for testing")
+    parser.add_argument("--no-privacy", action="store_true", help="Disable privacy mode for testing")
     args = parser.parse_args()
     
     # Load configuration and pull models if needed
     config = load_config()
     
-    # Get Ollama models for embeddings and LLM (if using Ollama)
-    embedding_model = config["embeddings"]["model"]
-    llm_provider = config["llm"]["provider"]
+    # Override privacy setting based on command line args
+    if args.privacy and args.no_privacy:
+        print("Error: Cannot specify both --privacy and --no-privacy")
+        return
+    elif args.privacy:
+        config["privacy"]["enable"] = True
+        print("Privacy mode: ENABLED for testing")
+    elif args.no_privacy:
+        config["privacy"]["enable"] = False
+        print("Privacy mode: DISABLED for testing")
+    else:
+        privacy_status = "ENABLED" if config["privacy"]["enable"] else "DISABLED"
+        print(f"Privacy mode: {privacy_status} (default)")
     
-    # Always pull embedding model (always uses Ollama)
-    pull_ollama_model(embedding_model)
-    
-    # Pull LLM model only if using Ollama
-    if llm_provider == "ollama":
-        llm_model = config["llm"]["models"]["ollama"]
-        pull_ollama_model(llm_model)
+    # Setup and pull required models
+    setup_and_pull_models(config)
     
     # Set repo path for data ingestion
     if args.repo:

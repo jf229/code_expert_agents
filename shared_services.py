@@ -297,6 +297,11 @@ class UnifiedResponseGenerator:
         self.prototype_name = prototype_name
         self.config = config
         
+        # Initialize privacy manager
+        from privacy_manager import PrivacyManager, PolicyGate
+        self.privacy_manager = PrivacyManager(config)
+        self.policy_gate = PolicyGate(config)
+        
         # Setup LLM provider
         llm_config = config.get("llm", {})
         provider_type = llm_config.get("provider", "ollama")
@@ -309,16 +314,35 @@ class UnifiedResponseGenerator:
             self.wca_service = WCAService(api_key=api_key)
             self.llm_provider = None
         else:
-            # Use new provider interface
+            # Use new provider interface with privacy hardening
             model = llm_config.get("models", {}).get(provider_type, "granite3.2:8b")
-            self.llm_provider = get_llm_provider(provider_type, model=model)
+            
+            # Apply privacy policies to provider config
+            provider_config = {"provider": provider_type, "model": model}
+            provider_config = self.policy_gate.enforce_provider_safety(provider_config)
+            
+            # Extract privacy headers for provider initialization
+            extra_headers = provider_config.get("extra_headers")
+            provider_kwargs = {"model": model}
+            if extra_headers:
+                provider_kwargs["extra_headers"] = extra_headers
+            
+            self.llm_provider = get_llm_provider(provider_type, **provider_kwargs)
             self.wca_service = None
     
     def generate_response_with_context(self, question, documents):
         """Generate response using LLM provider with retrieved documents."""
         
-        # Prepare context from documents
-        context = self._format_context(documents)
+        # Apply privacy sanitization if enabled
+        sanitized_documents, audit_metadata = self.privacy_manager.sanitize_documents(documents)
+        
+        # Log privacy audit event
+        if self.privacy_manager.enabled:
+            self.privacy_manager.log_audit_event("query_processed", audit_metadata, question)
+            print(f"Privacy: Sanitized {audit_metadata['sanitized_count']}/{audit_metadata['original_count']} documents ({audit_metadata['total_chars']} chars)")
+        
+        # Prepare context from sanitized documents
+        context = self._format_context(sanitized_documents)
         
         # Create prompt
         prompt = f"""You are a senior software engineer analyzing a codebase. Based on the retrieved code context below, provide a comprehensive answer to the user's question.
@@ -332,8 +356,8 @@ Provide a detailed technical analysis:"""
 
         try:
             if self.wca_service:
-                # Use WCA service
-                response = self.wca_service.get_architectural_analysis(question, documents)
+                # Use WCA service with sanitized documents
+                response = self.wca_service.get_architectural_analysis(question, sanitized_documents)
                 answer = response.get("choices", [{}])[0].get("message", {}).get("content", "No response")
             else:
                 # Use unified provider interface
@@ -343,11 +367,20 @@ Provide a detailed technical analysis:"""
                     max_tokens=self.config.get("llm", {}).get("max_tokens", 4000)
                 )
             
-            # Format and display result
+            # Log successful external LLM call
+            if self.privacy_manager.enabled and self.config.get("llm", {}).get("provider") != "ollama":
+                self.privacy_manager.log_audit_event("external_llm_call", {
+                    "provider": self.config.get("llm", {}).get("provider"),
+                    "prompt_chars": len(prompt),
+                    "response_chars": len(answer) if answer else 0
+                })
+            
+            # Format and display result (using original documents for source display)
             qa_result = {
                 "question": question,
                 "answer": answer,
-                "source_documents": documents
+                "source_documents": documents,  # Show original sources to user
+                "privacy_metadata": audit_metadata if self.privacy_manager.enabled else None
             }
             
             self.generate_response(qa_result)
@@ -355,6 +388,9 @@ Provide a detailed technical analysis:"""
             
         except Exception as e:
             print(f"Error generating response: {e}")
+            # Log error event
+            if self.privacy_manager.enabled:
+                self.privacy_manager.log_audit_event("error", {"error": str(e), "question_hash": question[:50]})
             return None
     
     def _format_context(self, documents):
@@ -443,3 +479,17 @@ def load_config():
     
     with open("config.yaml", "r") as f:
         return yaml.safe_load(f)
+
+
+def setup_and_pull_models(config):
+    """Pull required models based on configuration."""
+    llm_provider = config["llm"]["provider"]
+    embedding_model = config["embeddings"]["model"]
+    
+    # Always pull embedding model (always uses Ollama)
+    pull_ollama_model(embedding_model)
+    
+    # Pull LLM model only if using Ollama
+    if llm_provider == "ollama":
+        llm_model = config["llm"]["models"]["ollama"]
+        pull_ollama_model(llm_model)
