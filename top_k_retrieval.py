@@ -286,69 +286,20 @@ Architectural Analysis:"""
         
         # Step 3: Agent Orchestration
         print("--- Agent Orchestration ---")
-        if self.provider == "wca":
-            # For WCA, use the service directly
-            wca_service = self._setup_provider()
-            
-            # Get top-k documents
-            top_k = self.config["retrieval"]["top_k"]
-            docs = retriever.invoke(question, k=top_k)
-            
-            # Get analysis from WCA
-            print("Sending query to WCA...")
-            try:
-                wca_response = wca_service.get_architectural_analysis(question, docs)
-                
-                # Format response for consistency
-                qa_result = {
-                    "question": question,
-                    "answer": wca_response.get("choices", [{}])[0].get("message", {}).get("content", "No response"),
-                    "source_documents": docs
-                }
-                
-                self.response_generator.generate_response(qa_result)
-                
-            except Exception as e:
-                print(f"Error calling WCA API: {e}")
-        else:
-            # For Ollama, use dynamic prompting
-            llm = self._setup_provider()
-            
-            # Get top-k documents
-            top_k = self.config["retrieval"]["top_k"]
-            docs = retriever.invoke(question, k=top_k)
-            
-            # Create dynamic prompt based on question type
-            question_type = self._classify_question_type(question)
-            template = self._get_dynamic_prompt_template(question_type)
-            
-            # Format context from documents
-            context = "\n\n".join([
-                f"File: {doc.metadata['source']}\n{doc.page_content}" 
-                for doc in docs
-            ])
-            
-            # Generate response using optimized prompt
-            prompt = template.format(context=context, question=question)
-            
-            try:
-                response = llm.invoke(prompt)
-                
-                # Create result in expected format
-                qa_result = {
-                    "question": question,
-                    "answer": response.content if hasattr(response, 'content') else str(response),
-                    "source_documents": docs
-                }
-                
-                print(f"Using {question_type} prompting strategy")
-                self.response_generator.generate_response(qa_result)
-                
-            except Exception as e:
-                print(f"Error generating response: {e}")
-                # Fallback to chain-based approach
-                qa_chain = self._create_qa_chain(retriever)
-                self.response_generator.process_query(qa_chain, question)
+        
+        # Get top-k documents
+        top_k = self.config["retrieval"]["top_k"]
+        docs = retriever.invoke(question, k=top_k)
+        print(f"Retrieved {len(docs)} documents.")
+        
+        if not docs:
+            print("No relevant documents found for the query.")
+            return
+        
+        # Use unified response generator for any provider
+        from shared_services import UnifiedResponseGenerator
+        unified_generator = UnifiedResponseGenerator(self.config, prototype_name="Top-K Retrieval")
+        unified_generator.generate_response_with_context(question, docs)
         
         print("--- System Finished ---")
 
@@ -362,11 +313,18 @@ def main():
     
     # Load configuration and pull models if needed
     config = load_config()
-    llm_model = config["llm"]["ollama_model"]
-    embedding_model = config["embeddings"]["model"]
     
-    pull_ollama_model(llm_model)
+    # Get Ollama models for embeddings and LLM (if using Ollama)
+    embedding_model = config["embeddings"]["model"]
+    llm_provider = config["llm"]["provider"]
+    
+    # Always pull embedding model (always uses Ollama)
     pull_ollama_model(embedding_model)
+    
+    # Pull LLM model only if using Ollama
+    if llm_provider == "ollama":
+        llm_model = config["llm"]["models"]["ollama"]
+        pull_ollama_model(llm_model)
     
     # Set repo path for data ingestion
     if args.repo:
