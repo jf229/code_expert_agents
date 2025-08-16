@@ -1,92 +1,120 @@
 # RAG-Based Code Expert Agent Prototypes
 
-This project contains four distinct prototypes for a modular, RAG-based (Retrieval-Augmented Generation) code expert system. Each prototype implements a different advanced retrieval strategy to answer high-level questions about a code repository.
+This project contains four distinct prototypes for a RAG-based (Retrieval-Augmented Generation) code expert system. Each prototype implements a different advanced retrieval strategy to answer high-level questions about a code repository.
 
-## Centralized Architecture
+## Simplified Architecture ✨
 
-This project uses a single, centralized `config.yaml` file and a single `requirements.txt` file located in the root of the project. This makes it easy to manage the settings and dependencies for all four prototypes from one place. All data artifacts (vector stores, graphs, etc.) are also stored in the root directory.
+**New in v2:** This project has been completely refactored for simplicity and maintainability:
 
-## How to Use the Prototypes
+- **Single-file prototypes** - Each prototype is now a single Python file
+- **Shared common functionality** - Common code consolidated in `shared_services.py`
+- **No complex directory structures** - Flat, easy-to-navigate layout
+- **Same powerful features** - All original functionality preserved
+
+```
+├── config.yaml                    # Centralized configuration
+├── requirements.txt               # All dependencies  
+├── data_ingestion.py              # Centralized data loading
+├── shared_services.py             # Common WCA service, response generation, utilities
+├── top_k_retrieval.py             # Top-K prototype (single file)
+├── iterate_and_synthesize.py      # Iterate & Synthesize prototype (single file)
+├── graph_based_retrieval.py       # Graph-based prototype (single file)
+├── multi_representation.py        # Multi-representation prototype (single file)
+└── README.md                      # This file
+```
+
+## Quick Start
 
 ### 1. Initial Setup
 
-*   **Install Dependencies:** From the root of the project, run:
-    ```bash
-    pip install -r requirements.txt
-    ```
-*   **Configure Repository:** Open the root `config.yaml` and set the `repository.local_path` to the absolute path of the code repository you want to analyze.
-*   **Configure API Key:** Create a `.env` file in the root of the project by copying the `.env.example` template. Add your Watson Code Assistant API key to this file.
-    ```
-    WCA_API_KEY=YOUR_API_KEY_HERE
-    ```
-*   **Choose a Provider:** In `config.yaml`, set the `llm.provider` to either `"ollama"` or `"wca"`. If using Ollama, ensure your local Ollama server is running.
+**Install Dependencies:**
+```bash
+pip install -r requirements.txt
+```
 
-### 2. Running a Prototype
+**Configure Repository:** Edit `config.yaml` and set `repository.local_path` to your code repository path.
 
-All commands should be run from the **root of the project**.
+**Configure API Key (if using WCA):** Create a `.env` file:
+```bash
+WCA_API_KEY=YOUR_API_KEY_HERE
+```
+
+**Choose Provider:** In `config.yaml`, set `llm.provider` to `"ollama"` or `"wca"`.
+
+### 2. Run Any Prototype
+
+All prototypes are now single files you can run directly:
 
 ---
 
-### Prototype 1: Top-K Retrieval
+**Fast & Simple:** Just run directly!
 
-This is the baseline approach. It's fast and effective for clear, specific questions. It performs data ingestion and vectorization automatically.
-
-**Use Case:** Getting a quick, high-level analysis based on the most relevant files.
-
-**Command:**
 ```bash
-python retrieval_prototypes/top_k_retrieval/main.py "Provide an architectural analysis of the StravaService"
+python top_k_retrieval.py "Provide an architectural analysis of the StravaService"
 ```
 
 ---
 
-### Prototype 2: Iterate and Synthesize
+## Prototype 2: Iterate and Synthesize
 
 This "MapReduce" agent analyzes every single file, making it extremely thorough but very slow.
 
 **Use Case:** Generating a complete, repository-wide architectural overview.
 
-**Command:**
 ```bash
-python retrieval_prototypes/iterate_and_synthesize/main.py "Provide a comprehensive architectural analysis of this entire project"
+python iterate_and_synthesize.py "Provide a comprehensive architectural analysis of this entire project"
 ```
 
 ---
 
-### Prototype 3: Graph-Based Retrieval
+## Prototype 3: Graph-Based Retrieval
 
 The most powerful prototype for specific, targeted questions about code entities.
 
 **Use Case:** Answering precise questions about a specific class or function.
 
-**Commands:**
 ```bash
-# Step 1: Build the knowledge graph
-python retrieval_prototypes/graph_based_retrieval/graph_builder.py
+# Step 1: Build the knowledge graph (run once)
+python graph_based_retrieval.py --build-graph
 
-# Step 2: Run the agent with a specific question
-python retrieval_prototypes/graph_based_retrieval/main.py "explain the LoginViewModel class"
+# Step 2: Run queries
+python graph_based_retrieval.py "explain the LoginViewModel class"
 ```
 
 ---
 
-### Prototype 4: Multi-Representation Indexing
+## Prototype 4: Multi-Representation Indexing
 
 A hybrid agent that uses different strategies for different types of questions.
 
-**Use Case:** Flexible analysis. Use `--strategy broad` for a high-level overview, and `--strategy specific` for targeted questions.
+**Use Case:** Flexible analysis. Use `--strategy broad` for overview, `--strategy specific` for targeted questions.
 
-**Commands:**
 ```bash
-# Step 1: Build the multi-level representations (slow, calls the LLM for each file)
-python retrieval_prototypes/multi_representation_indexing/representation_builder.py
+# Step 1: Build the multi-representations (run once, slow - calls LLM for each file)
+python multi_representation.py --build-representations
 
-# Step 2: Build the vector store
-python retrieval_prototypes/multi_representation_indexing/vectorization/main.py
-
-# Step 3: Run the Agent
-# For a broad overview:
-python retrieval_prototypes/multi_representation_indexing/main.py "explain this repo" --strategy broad
-# For a specific question:
-python retrieval_prototypes/multi_representation_indexing/main.py "how is user authentication handled" --strategy specific
+# Step 2: Run queries with different strategies
+python multi_representation.py "explain this repo" --strategy broad
+python multi_representation.py "how is user authentication handled" --strategy specific
 ```
+
+---
+
+## What Changed in v2? 
+
+✅ **Massive Simplification:**
+- Reduced from **25+ files** to **8 files**
+- Eliminated complex nested directories
+- No more confusing import paths
+
+✅ **Same Powerful Features:**
+- All 4 retrieval strategies preserved
+- All configuration options maintained  
+- WCA and Ollama support unchanged
+
+✅ **Much Better Developer Experience:**
+- Single-file prototypes are easy to understand and modify
+- Clear, direct commands 
+- Consolidated shared functionality
+
+This refactoring maintained 100% of the original functionality while making the codebase dramatically easier to work with.
