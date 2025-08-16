@@ -29,9 +29,9 @@ from tqdm import tqdm
 from langchain.chains import ConversationalRetrievalChain, LLMChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.prompts import PromptTemplate
-from langchain_community.chat_models import ChatOllama
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import ChatOllama
+from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
 from langchain.retrievers.multi_vector import MultiVectorRetriever
 from langchain.storage import InMemoryStore
 from langchain.schema.document import Document

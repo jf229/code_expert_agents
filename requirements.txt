@@ -2,12 +2,15 @@
 
 # Core LangChain and application libraries
 langchain
+langchain-community
+langchain-chroma
+langchain-ollama
+chromadb
 fastapi
 uvicorn
 python-dotenv
 pyyaml
 gitpython
-langchain-community
 requests
 tqdm
 networkx

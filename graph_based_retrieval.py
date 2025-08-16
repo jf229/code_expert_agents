@@ -36,7 +36,7 @@ except ImportError:
 from langchain.chains import ConversationalRetrievalChain, LLMChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.prompts import PromptTemplate
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 from langchain_core.retrievers import BaseRetriever
 from langchain.schema import Document
 

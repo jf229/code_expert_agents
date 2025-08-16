@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 # LangChain imports
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
