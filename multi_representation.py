@@ -334,7 +334,17 @@ Architectural Analysis:"""
         """Run the Multi-Representation agent with the given question and strategy."""
         print(f"--- RAG-based Code Expert Agent (Multi-Representation, Strategy: {strategy}) ---")
         
-        # Step 1: Vectorization
+        # Step 1: Check if representations exist, build if needed
+        print("--- Multi-Representation Setup ---")
+        representations_path = self.storage_config["multi_representations"]
+        if not os.path.exists(representations_path):
+            print("Multi-representations not found. Building automatically...")
+            print("This will take a while as it processes each file with the LLM...")
+            success = self.build_representations()
+            if not success:
+                return
+        
+        # Step 2: Vectorization
         print("--- Vectorization ---")
         vectorizer = MultiRepresentationVectorizer(self.config)
         retriever = vectorizer.create_retriever()

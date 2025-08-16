@@ -293,8 +293,16 @@ Architectural Analysis:"""
         """Run the Graph-Based retrieval agent with the given question."""
         print("--- RAG-based Code Expert Agent (Graph-Based Retrieval) ---")
         
-        # Step 1: Load the graph
-        print("--- Loading Knowledge Graph ---")
+        # Step 1: Check if graph exists, build if needed
+        print("--- Knowledge Graph Setup ---")
+        graph_path = self.storage_config["code_graph"]
+        if not os.path.exists(graph_path):
+            print("Knowledge graph not found. Building automatically...")
+            success = self.build_graph()
+            if not success:
+                return
+        
+        # Load the graph
         graph = self._load_graph()
         if graph is None:
             return

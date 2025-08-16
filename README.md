@@ -74,11 +74,11 @@ The most powerful prototype for specific, targeted questions about code entities
 **Use Case:** Answering precise questions about a specific class or function.
 
 ```bash
-# Step 1: Build the knowledge graph (run once)
-python graph_based_retrieval.py --build-graph
-
-# Step 2: Run queries
+# Just run directly! Graph builds automatically if needed
 python graph_based_retrieval.py "explain the LoginViewModel class"
+
+# Or build graph manually first (optional)
+python graph_based_retrieval.py --build-graph
 ```
 
 ---
@@ -90,12 +90,12 @@ A hybrid agent that uses different strategies for different types of questions.
 **Use Case:** Flexible analysis. Use `--strategy broad` for overview, `--strategy specific` for targeted questions.
 
 ```bash
-# Step 1: Build the multi-representations (run once, slow - calls LLM for each file)
-python multi_representation.py --build-representations
-
-# Step 2: Run queries with different strategies
+# Just run directly! Representations build automatically if needed (slow first time)
 python multi_representation.py "explain this repo" --strategy broad
 python multi_representation.py "how is user authentication handled" --strategy specific
+
+# Or build representations manually first (optional)
+python multi_representation.py --build-representations
 ```
 
 ---
