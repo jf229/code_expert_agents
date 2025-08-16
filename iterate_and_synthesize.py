@@ -25,7 +25,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
 # Import shared services and central data ingestion
-from shared_services import WCAService, ResponseGenerator, pull_ollama_model, load_config
+from shared_services import WCAService, ResponseGenerator, load_config, setup_and_pull_models
 from data_ingestion import main as data_ingestion_main
 
 
@@ -48,8 +48,10 @@ class IterateAndSynthesizeAgent:
                 raise ValueError("WCA_API_KEY not found in environment variables.")
             return WCAService(api_key=api_key)
         else:
+            # Use ChatOllama with correct config path
+            model = self.llm_config["models"][self.provider]
             return ChatOllama(
-                model=self.llm_config["ollama_model"],
+                model=model,
                 temperature=0,
                 top_k=40,
                 top_p=0.9
@@ -200,15 +202,16 @@ def main():
     """Main entry point for Iterate and Synthesize prototype."""
     parser = argparse.ArgumentParser(description="RAG-based Code Expert Agent (Iterate and Synthesize)")
     parser.add_argument("question", type=str, help="The question to ask the agent.")
+    parser.add_argument("--repo", help="Repository path to analyze")
     args = parser.parse_args()
     
     # Load configuration and pull models if needed
     config = load_config()
-    llm_model = config["llm"]["ollama_model"]
-    embedding_model = config["embeddings"]["model"]
+    setup_and_pull_models(config)
     
-    pull_ollama_model(llm_model)
-    pull_ollama_model(embedding_model)
+    # Set repo path for data ingestion
+    if args.repo:
+        os.environ["REPO_PATH"] = args.repo
     
     # Run the agent
     agent = IterateAndSynthesizeAgent()

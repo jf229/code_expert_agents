@@ -37,7 +37,8 @@ from langchain.storage import InMemoryStore
 from langchain.schema.document import Document
 
 # Import shared services and central data ingestion
-from shared_services import WCAService, ResponseGenerator, pull_ollama_model, load_config
+from shared_services import WCAService, ResponseGenerator, load_config, setup_and_pull_models
+from llm_providers import get_llm_provider
 from data_ingestion import main as data_ingestion_main
 
 
@@ -59,8 +60,10 @@ class RepresentationBuilder:
                 raise ValueError("WCA_API_KEY not found in environment variables.")
             return WCAService(api_key=api_key)
         else:
+            # Use ChatOllama with correct config path
+            model = self.llm_config["models"][self.provider]
             return ChatOllama(
-                model=self.llm_config["ollama_model"],
+                model=model,
                 temperature=0,
                 top_k=40,
                 top_p=0.9
@@ -267,8 +270,10 @@ class MultiRepresentationAgent:
                 raise ValueError("WCA_API_KEY not found in environment variables.")
             return WCAService(api_key=api_key)
         else:
+            # Use ChatOllama with correct config path
+            model = self.llm_config["models"][self.provider]
             return ChatOllama(
-                model=self.llm_config["ollama_model"],
+                model=model,
                 temperature=0,
                 top_k=40,
                 top_p=0.9
@@ -503,10 +508,15 @@ def main():
                        help="Retrieval strategy: 'broad' for overview questions, 'specific' for targeted questions")
     parser.add_argument("--build-representations", action="store_true", 
                        help="Build multi-level representations (slow, calls the LLM for each file)")
+    parser.add_argument("--repo", help="Repository path to analyze")
     args = parser.parse_args()
     
     # Load configuration
     config = load_config()
+    
+    # Set repo path for data ingestion
+    if args.repo:
+        os.environ["REPO_PATH"] = args.repo
     
     # Create agent
     agent = MultiRepresentationAgent()
@@ -527,12 +537,8 @@ def main():
         print("   or: python multi_representation.py --build-representations")
         return
     
-    # Pull models if needed
-    llm_model = config["llm"]["ollama_model"]
-    embedding_model = config["embeddings"]["model"]
-    
-    pull_ollama_model(llm_model)
-    pull_ollama_model(embedding_model)
+    # Setup and pull required models
+    setup_and_pull_models(config)
     
     # Run the agent
     agent.run(args.question, args.strategy)
