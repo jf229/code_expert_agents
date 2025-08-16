@@ -330,6 +330,105 @@ Architectural Analysis:"""
         builder = RepresentationBuilder(self.config)
         return builder.build_representations()
     
+    def _analyze_question_features(self, question):
+        """Analyze question to determine optimal strategy."""
+        question_lower = question.lower()
+        
+        features = {
+            'scope': 'general',
+            'complexity': 'medium',
+            'specificity': 'medium'
+        }
+        
+        # Determine scope
+        if any(word in question_lower for word in ['entire', 'whole', 'all', 'overall', 'complete', 'full']):
+            features['scope'] = 'system_wide'
+        elif any(word in question_lower for word in ['specific', 'particular', 'individual', 'single']):
+            features['scope'] = 'specific_entity'
+        elif any(word in question_lower for word in ['class', 'function', 'method', 'component']):
+            features['scope'] = 'component_focused'
+        
+        # Determine complexity
+        if any(word in question_lower for word in ['how', 'why', 'explain', 'detailed', 'deep', 'comprehensive']):
+            features['complexity'] = 'high'
+        elif any(word in question_lower for word in ['what', 'which', 'where', 'simple', 'basic']):
+            features['complexity'] = 'low'
+        
+        # Determine specificity
+        if any(word in question_lower for word in ['overview', 'summary', 'general', 'broad']):
+            features['specificity'] = 'low'
+        elif any(word in question_lower for word in ['detailed', 'specific', 'exact', 'precise']):
+            features['specificity'] = 'high'
+        
+        return features
+    
+    def _select_optimal_strategy(self, question, user_strategy):
+        """Select optimal retrieval strategy based on question analysis."""
+        
+        # Analyze question features
+        features = self._analyze_question_features(question)
+        
+        # Define strategy configurations
+        strategies = {
+            'focused': {
+                'name': 'focused',
+                'k': 3,
+                'description': 'Focused search for specific entities'
+            },
+            'broad': {
+                'name': 'broad', 
+                'k': 12,
+                'description': 'Broad search for system-wide understanding'
+            },
+            'hybrid': {
+                'name': 'hybrid',
+                'k': 8, 
+                'description': 'Balanced approach for moderate complexity'
+            },
+            'deep_dive': {
+                'name': 'deep_dive',
+                'k': 6,
+                'description': 'Deep analysis for complex questions'
+            }
+        }
+        
+        # If user specified a strategy, respect it but optimize parameters
+        if user_strategy == 'broad':
+            strategy = strategies['broad'].copy()
+        elif user_strategy == 'specific':
+            strategy = strategies['focused'].copy()
+        else:
+            # Auto-select based on question features
+            if features['scope'] == 'system_wide':
+                strategy = strategies['broad'].copy()
+            elif features['scope'] == 'specific_entity':
+                strategy = strategies['focused'].copy()
+            elif features['complexity'] == 'high':
+                strategy = strategies['deep_dive'].copy()
+            else:
+                strategy = strategies['hybrid'].copy()
+        
+        # Fine-tune based on features
+        if features['complexity'] == 'high':
+            strategy['k'] = min(strategy['k'] + 2, 15)
+        elif features['complexity'] == 'low':
+            strategy['k'] = max(strategy['k'] - 1, 2)
+        
+        return strategy
+    
+    def _configure_retriever_with_strategy(self, retriever, strategy):
+        """Configure retriever with optimal strategy parameters."""
+        
+        # Set search parameters
+        retriever.search_kwargs = {"k": strategy['k']}
+        
+        # Could add more sophisticated configuration here:
+        # - Similarity thresholds
+        # - Representation type weighting
+        # - Document filtering criteria
+        
+        return retriever
+    
     def run(self, question, strategy='specific'):
         """Run the Multi-Representation agent with the given question and strategy."""
         print(f"--- RAG-based Code Expert Agent (Multi-Representation, Strategy: {strategy}) ---")
@@ -352,17 +451,11 @@ Architectural Analysis:"""
         if retriever is None:
             return
         
-        # Step 2: Configure retrieval based on strategy
-        if strategy == 'broad':
-            # For broad questions, get more documents
-            k = self.retrieval_config.get('broad_strategy_k', 10)
-            retriever.search_kwargs = {"k": k}
-            print(f"Using broad strategy with k={k}")
-        else:
-            # For specific questions, get fewer but more relevant documents
-            k = self.retrieval_config.get('specific_strategy_k', 5)
-            retriever.search_kwargs = {"k": k}
-            print(f"Using specific strategy with k={k}")
+        # Step 2: Configure retrieval based on adaptive strategy selection
+        optimal_strategy = self._select_optimal_strategy(question, strategy)
+        retriever = self._configure_retriever_with_strategy(retriever, optimal_strategy)
+        
+        print(f"Using {optimal_strategy['name']} strategy with k={optimal_strategy['k']}")
         
         # Step 3: Agent Orchestration
         print("--- Agent Orchestration ---")

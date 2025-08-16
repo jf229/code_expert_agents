@@ -82,24 +82,149 @@ class WCAService:
             print(f"Error calling WCA API: {e}")
             raise
 
+    def _classify_question_type(self, question):
+        """Classify question to use appropriate prompt strategy."""
+        question_lower = question.lower()
+        
+        if any(word in question_lower for word in ['architecture', 'overview', 'structure', 'design', 'pattern']):
+            return 'architectural'
+        elif any(word in question_lower for word in ['how', 'implement', 'work', 'process', 'algorithm']):
+            return 'implementation'
+        elif any(word in question_lower for word in ['what', 'class', 'function', 'method', 'specific']):
+            return 'entity_specific'
+        elif any(word in question_lower for word in ['why', 'reason', 'purpose', 'decision', 'rationale']):
+            return 'rationale'
+        elif any(word in question_lower for word in ['flow', 'data', 'process', 'workflow', 'pipeline']):
+            return 'data_flow'
+        else:
+            return 'general'
+
+    def _get_prompt_for_question_type(self, question, question_type, file_references):
+        """Return optimized prompt template for question type."""
+        
+        prompts = {
+            'architectural': f"""You are a senior software architect analyzing system design. The user wants to understand the architectural aspects of this codebase.
+
+User's Question: '{question}'
+
+Focus your analysis on:
+- Overall system design and architectural patterns
+- Component relationships and dependencies  
+- Design decisions and trade-offs
+- System boundaries and interfaces
+- Scalability and maintainability considerations
+
+Structure your response with:
+1. **Architectural Overview:** High-level system design answering the question directly
+2. **Key Components:** Main architectural components and their responsibilities
+3. **Design Patterns:** Architectural patterns and design principles used
+4. **Component Relationships:** How components interact and depend on each other
+5. **Design Rationale:** Why this architecture was chosen and its benefits
+
+Retrieved Files: {file_references}""",
+
+            'implementation': f"""You are a senior developer explaining code implementation. The user wants to understand HOW something works in this codebase.
+
+User's Question: '{question}'
+
+Focus your analysis on:
+- Step-by-step process flows and algorithms
+- Key implementation details and mechanisms
+- Code execution paths and control flow
+- Data transformations and processing logic
+
+Structure your response with:
+1. **Process Overview:** High-level explanation of how it works
+2. **Implementation Steps:** Detailed step-by-step breakdown
+3. **Key Algorithms:** Important algorithms and logic used
+4. **Code Flow:** How execution flows through the components
+5. **Technical Details:** Important implementation specifics
+
+Retrieved Files: {file_references}""",
+
+            'entity_specific': f"""You are a code expert explaining specific code entities. The user wants to understand a particular class, function, or component.
+
+User's Question: '{question}'
+
+Focus your analysis on:
+- Purpose and responsibilities of the specific entity
+- Input/output parameters and return types
+- Internal logic and behavior
+- Usage patterns and integration points
+
+Structure your response with:
+1. **Entity Purpose:** What this entity does and why it exists
+2. **Interface Definition:** Parameters, return types, and public methods
+3. **Internal Logic:** How it works internally
+4. **Usage Context:** How and where it's used in the system
+5. **Dependencies:** What it depends on and what depends on it
+
+Retrieved Files: {file_references}""",
+
+            'rationale': f"""You are a software architect explaining design decisions. The user wants to understand WHY certain choices were made in this codebase.
+
+User's Question: '{question}'
+
+Focus your analysis on:
+- Design decisions and the reasoning behind them
+- Trade-offs and alternatives considered
+- Benefits and limitations of chosen approaches
+- Context that influenced the decisions
+
+Structure your response with:
+1. **Decision Context:** What decision was made and the situation
+2. **Reasoning:** Why this approach was chosen
+3. **Trade-offs:** Benefits and drawbacks of the decision
+4. **Alternatives:** Other options that could have been chosen
+5. **Impact:** How this decision affects the overall system
+
+Retrieved Files: {file_references}""",
+
+            'data_flow': f"""You are a systems analyst explaining data flow and processing. The user wants to understand how data moves through this system.
+
+User's Question: '{question}'
+
+Focus your analysis on:
+- Data flow paths and transformations
+- Processing stages and data handling
+- Input/output data structures
+- Data persistence and state management
+
+Structure your response with:
+1. **Data Flow Overview:** High-level data movement through the system
+2. **Data Sources:** Where data originates and how it enters
+3. **Processing Stages:** How data is transformed and processed
+4. **Data Storage:** How and where data is persisted
+5. **Data Outputs:** Final data products and how they're used
+
+Retrieved Files: {file_references}""",
+
+            'general': f"""You are a senior software architect. The user has asked the following question: '{question}'
+
+Based on the retrieved source files, provide a comprehensive analysis that directly answers the user's question.
+
+Structure your response with:
+1. **Direct Answer:** Address the user's question directly
+2. **Core Components:** Key components relevant to the question
+3. **Technical Details:** Important implementation details
+4. **Context:** How this fits into the broader system
+5. **Additional Insights:** Other relevant information
+
+Retrieved Files: {file_references}"""
+        }
+        
+        return prompts.get(question_type, prompts['general'])
+
     def get_architectural_analysis(self, question, documents):
-        """Get architectural analysis based on retrieved documents."""
+        """Get architectural analysis based on retrieved documents with dynamic prompting."""
         file_references = " ".join([
             f"[{os.path.basename(doc.metadata['source'])}](<file-{os.path.basename(doc.metadata['source'])}>)"
             for doc in documents
         ])
         
-        prompt = f"""You are a senior software architect. The user has asked the following question: '{question}'
-
-Based on the following set of retrieved source files, produce a comprehensive analysis of the project. Your analysis should be structured with the following sections:
-
-1.  **High-Level Summary:** A brief, one-paragraph overview of the project's purpose and primary function, answering the user's question directly.
-2.  **Core Components:** A bulleted list of the key components, classes, or modules present in the provided files, with a brief description of each one's responsibility.
-3.  **Architectural Patterns:** An analysis of the architectural patterns suggested by the provided files (e.g., MVVM, Singleton, Service-Oriented).
-4.  **Code Flow and Data Management:** An explanation of how data likely flows through the system, based on the interactions between the components in the provided files.
-
-Retrieved Files: {file_references}
-"""
+        # Classify question and get appropriate prompt
+        question_type = self._classify_question_type(question)
+        prompt = self._get_prompt_for_question_type(question, question_type, file_references)
 
         payload = {
             "message_payload": {

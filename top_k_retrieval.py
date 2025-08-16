@@ -112,16 +112,123 @@ class TopKAgent:
                 top_p=0.9
             )
     
+    def _classify_question_type(self, question):
+        """Classify question to use appropriate prompt strategy."""
+        question_lower = question.lower()
+        
+        if any(word in question_lower for word in ['architecture', 'overview', 'structure', 'design', 'pattern']):
+            return 'architectural'
+        elif any(word in question_lower for word in ['how', 'implement', 'work', 'process', 'algorithm']):
+            return 'implementation'
+        elif any(word in question_lower for word in ['what', 'class', 'function', 'method', 'specific']):
+            return 'entity_specific'
+        elif any(word in question_lower for word in ['why', 'reason', 'purpose', 'decision', 'rationale']):
+            return 'rationale'
+        elif any(word in question_lower for word in ['flow', 'data', 'process', 'workflow', 'pipeline']):
+            return 'data_flow'
+        else:
+            return 'general'
+
+    def _get_dynamic_prompt_template(self, question_type):
+        """Get prompt template optimized for question type."""
+        
+        templates = {
+            'architectural': """You are a senior software architect analyzing system design. Focus on architectural aspects of this codebase.
+
+Based on the retrieved source files, analyze the system architecture with focus on:
+- Overall system design and architectural patterns
+- Component relationships and dependencies
+- Design decisions and trade-offs
+- System boundaries and interfaces
+
+Retrieved Documents (Context):
+{context}
+
+User's Question: {question}
+
+Provide an architectural analysis with these sections:
+1. **Architectural Overview:** High-level system design
+2. **Key Components:** Main architectural components and responsibilities
+3. **Design Patterns:** Architectural patterns used
+4. **Component Relationships:** How components interact
+5. **Design Rationale:** Why this architecture was chosen
+
+Analysis:""",
+
+            'implementation': """You are a senior developer explaining code implementation. Focus on HOW things work in this codebase.
+
+Based on the retrieved source files, explain the implementation with focus on:
+- Step-by-step process flows and algorithms
+- Key implementation details and mechanisms
+- Code execution paths and control flow
+- Data transformations and processing logic
+
+Retrieved Documents (Context):
+{context}
+
+User's Question: {question}
+
+Provide an implementation analysis with these sections:
+1. **Process Overview:** High-level explanation of how it works
+2. **Implementation Steps:** Detailed step-by-step breakdown
+3. **Key Algorithms:** Important algorithms and logic
+4. **Code Flow:** How execution flows through components
+5. **Technical Details:** Important implementation specifics
+
+Analysis:""",
+
+            'entity_specific': """You are a code expert explaining specific code entities. Focus on particular classes, functions, or components.
+
+Based on the retrieved source files, explain the specific entity with focus on:
+- Purpose and responsibilities of the entity
+- Input/output parameters and return types
+- Internal logic and behavior
+- Usage patterns and integration points
+
+Retrieved Documents (Context):
+{context}
+
+User's Question: {question}
+
+Provide an entity analysis with these sections:
+1. **Entity Purpose:** What this entity does and why it exists
+2. **Interface Definition:** Parameters, return types, public methods
+3. **Internal Logic:** How it works internally
+4. **Usage Context:** How and where it's used
+5. **Dependencies:** What it depends on and what depends on it
+
+Analysis:""",
+
+            'general': """You are a senior software architect. Based on the retrieved source files, provide a comprehensive analysis that directly answers the user's question.
+
+Retrieved Documents (Context):
+{context}
+
+User's Question: {question}
+
+Provide a comprehensive analysis with:
+1. **Direct Answer:** Address the question directly
+2. **Core Components:** Key components relevant to the question
+3. **Technical Details:** Important implementation details
+4. **Context:** How this fits into the broader system
+5. **Additional Insights:** Other relevant information
+
+Analysis:"""
+        }
+        
+        return templates.get(question_type, templates['general'])
+
     def _create_qa_chain(self, retriever):
         """Create the QA chain for the agent."""
         if self.provider == "wca":
             # For WCA, we'll handle this differently in the run method
             return retriever
         else:
-            # For Ollama, create a proper chain
+            # For Ollama, create a proper chain with dynamic prompting
             llm = self._setup_provider()
             
-            # Create prompt template
+            # We'll create the prompt dynamically in the run method
+            # For now, create a placeholder that will be replaced
             template = """You are a senior software architect. Based on the following set of retrieved source files, produce a comprehensive analysis of the project that directly answers the user's question.
 
 Retrieved Documents (Context):
@@ -203,9 +310,44 @@ Architectural Analysis:"""
             except Exception as e:
                 print(f"Error calling WCA API: {e}")
         else:
-            # For Ollama, use the chain
-            qa_chain = self._create_qa_chain(retriever)
-            self.response_generator.process_query(qa_chain, question)
+            # For Ollama, use dynamic prompting
+            llm = self._setup_provider()
+            
+            # Get top-k documents
+            top_k = self.config["retrieval"]["top_k"]
+            docs = retriever.get_relevant_documents(question, k=top_k)
+            
+            # Create dynamic prompt based on question type
+            question_type = self._classify_question_type(question)
+            template = self._get_dynamic_prompt_template(question_type)
+            
+            # Format context from documents
+            context = "\n\n".join([
+                f"File: {doc.metadata['source']}\n{doc.page_content}" 
+                for doc in docs
+            ])
+            
+            # Generate response using optimized prompt
+            prompt = template.format(context=context, question=question)
+            
+            try:
+                response = llm.invoke(prompt)
+                
+                # Create result in expected format
+                qa_result = {
+                    "question": question,
+                    "answer": response.content if hasattr(response, 'content') else str(response),
+                    "source_documents": docs
+                }
+                
+                print(f"Using {question_type} prompting strategy")
+                self.response_generator.generate_response(qa_result)
+                
+            except Exception as e:
+                print(f"Error generating response: {e}")
+                # Fallback to chain-based approach
+                qa_chain = self._create_qa_chain(retriever)
+                self.response_generator.process_query(qa_chain, question)
         
         print("--- System Finished ---")
 
