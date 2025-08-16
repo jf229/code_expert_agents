@@ -9,6 +9,7 @@ import time
 import base64
 import json
 import uuid
+from llm_providers import get_llm_provider
 
 
 class WCAService:
@@ -286,6 +287,100 @@ Here are the summaries:
         }
         
         return self._call_wca_api(payload)
+
+
+class UnifiedResponseGenerator:
+    """Unified response generator that works with any LLM provider."""
+    
+    def __init__(self, config, show_sources=True, prototype_name="RAG Agent"):
+        self.show_sources = show_sources
+        self.prototype_name = prototype_name
+        self.config = config
+        
+        # Setup LLM provider
+        llm_config = config.get("llm", {})
+        provider_type = llm_config.get("provider", "ollama")
+        
+        if provider_type == "wca":
+            # Keep WCA for backward compatibility
+            api_key = os.environ.get("WCA_API_KEY")
+            if not api_key:
+                raise ValueError("WCA_API_KEY not found in environment variables.")
+            self.wca_service = WCAService(api_key=api_key)
+            self.llm_provider = None
+        else:
+            # Use new provider interface
+            model = llm_config.get("models", {}).get(provider_type, "granite3.2:8b")
+            self.llm_provider = get_llm_provider(provider_type, model=model)
+            self.wca_service = None
+    
+    def generate_response_with_context(self, question, documents):
+        """Generate response using LLM provider with retrieved documents."""
+        
+        # Prepare context from documents
+        context = self._format_context(documents)
+        
+        # Create prompt
+        prompt = f"""You are a senior software engineer analyzing a codebase. Based on the retrieved code context below, provide a comprehensive answer to the user's question.
+
+Retrieved Code Context:
+{context}
+
+User's Question: {question}
+
+Provide a detailed technical analysis:"""
+
+        try:
+            if self.wca_service:
+                # Use WCA service
+                response = self.wca_service.get_architectural_analysis(question, documents)
+                answer = response.get("choices", [{}])[0].get("message", {}).get("content", "No response")
+            else:
+                # Use unified provider interface
+                answer = self.llm_provider.generate_response(
+                    prompt,
+                    temperature=self.config.get("llm", {}).get("temperature", 0.1),
+                    max_tokens=self.config.get("llm", {}).get("max_tokens", 4000)
+                )
+            
+            # Format and display result
+            qa_result = {
+                "question": question,
+                "answer": answer,
+                "source_documents": documents
+            }
+            
+            self.generate_response(qa_result)
+            return qa_result
+            
+        except Exception as e:
+            print(f"Error generating response: {e}")
+            return None
+    
+    def _format_context(self, documents):
+        """Format documents into context string."""
+        context_parts = []
+        
+        for i, doc in enumerate(documents[:10]):  # Limit to top 10 documents
+            source = doc.metadata.get('source', f'Document {i+1}')
+            content = doc.page_content[:2000]  # Limit content length
+            context_parts.append(f"=== {source} ===\n{content}\n")
+        
+        return "\n".join(context_parts)
+    
+    def generate_response(self, qa_result):
+        """Generate and display response from QA result."""
+        print(f"\n--- {self.prototype_name} Response ---")
+        print(f"Question: {qa_result['question']}")
+        print(f"Answer: {qa_result['answer']}")
+        
+        if self.show_sources:
+            source_documents = qa_result.get('source_documents', [])
+            if source_documents:
+                print("\nSource Documents:")
+                for doc in source_documents:
+                    if hasattr(doc, 'metadata') and 'source' in doc.metadata:
+                        print(f"- {doc.metadata['source']}")
 
 
 class ResponseGenerator:

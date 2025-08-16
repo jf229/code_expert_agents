@@ -4,6 +4,163 @@
 
 After analyzing each prototype's prompting strategies and agent design, here are opportunities to improve answer quality while maintaining their intended design:
 
+---
+
+# 🚀 Multi-Agent Hierarchical Architecture (Advanced Enhancement)
+
+## Integrated Multi-Hierarchy System
+
+Building on the existing 4 prototypes, we can create a sophisticated multi-agent system that combines **Router-Based**, **Domain-Specialized**, and **Question-Type** hierarchies for robust code knowledge.
+
+### **Master Architecture**
+
+```
+Master Coordinator
+├── Question Classifier (determines "what/how/why/where")
+├── Domain Router (identifies backend/frontend/data/infrastructure)  
+└── Execution Engine (selects appropriate agent combination)
+```
+
+### **Domain Specialization Layer**
+
+#### **Backend Specialist**
+- **Base Agent**: Graph-based + Implementation focus
+- **Specialization**: API endpoints, business logic, service layers
+- **Custom Prompts**: "Focus on server-side architecture, business rules, and service interactions"
+- **Retrieval Priority**: Controllers, services, middleware, business logic files
+
+#### **Frontend Specialist** 
+- **Base Agent**: Top-K + Component focus
+- **Specialization**: UI components, user interactions, state management
+- **Custom Prompts**: "Focus on user experience, component hierarchy, and client-side logic"
+- **Retrieval Priority**: Components, hooks, styles, routing files
+
+#### **Data Specialist**
+- **Base Agent**: Graph-based + Relationship focus
+- **Specialization**: Models, databases, data flow
+- **Custom Prompts**: "Focus on data structures, persistence, and data relationships"
+- **Retrieval Priority**: Models, migrations, database configs, data access layers
+
+#### **Infrastructure Specialist**
+- **Base Agent**: Iterate & Synthesize + System focus
+- **Specialization**: Deployment, configuration, tooling
+- **Custom Prompts**: "Focus on system setup, deployment pipelines, and environment management"
+- **Retrieval Priority**: Config files, Docker, CI/CD, build scripts
+
+### **Question-Type Optimization**
+
+#### **"What" Questions → Entity-Focused**
+- **Primary Agent**: Graph-based retrieval for precise entity lookup
+- **Support**: Domain specialist provides context-specific explanation
+- **Routing**: Simple, usually single-domain
+
+#### **"How" Questions → Process-Focused**
+- **Flow**: Architecture overview → Domain specialists → Implementation synthesis
+- **Primary Agents**: Architecture + Implementation + Domain specialists
+- **Routing**: Complex, often multi-domain
+
+#### **"Why" Questions → Rationale-Focused**
+- **Primary Agent**: Iterate & Synthesize for comprehensive context
+- **Support**: Domain specialists provide technical rationale
+- **Routing**: Medium complexity, context-heavy
+
+#### **"Where" Questions → Location-Focused**
+- **Primary Agent**: Top-K for quick location
+- **Support**: Graph-based for relationship discovery
+- **Routing**: Simple, with potential follow-up escalation
+
+### **Smart Routing Examples**
+
+#### **Simple Question**
+```
+Q: "What is the UserService class?"
+Classification: What + Backend + Simple
+Route: Backend Specialist (Graph-based retrieval)
+Execution: Single agent, focused response
+```
+
+#### **Complex Question**
+```
+Q: "How does the entire checkout process work from cart to payment confirmation?"
+Classification: How + Frontend + Backend + Data + Complex
+Route: 
+1. Architecture Agent (system overview)
+2. Parallel: Frontend + Backend + Data specialists
+3. Implementation Agent (relationship synthesis)
+Execution: Multi-agent orchestration with synthesis
+```
+
+#### **Cross-Domain Question**
+```
+Q: "Why does the frontend validation duplicate the backend validation rules?"
+Classification: Why + Frontend + Backend + Medium
+Route:
+1. Frontend Specialist (client-side validation analysis)
+2. Backend Specialist (server-side validation analysis)  
+3. Architecture Agent (design rationale synthesis)
+Execution: Sequential analysis with architectural reasoning
+```
+
+### **Agent Orchestration Patterns**
+
+#### **Collaborative Pattern**
+- Multiple specialists work on same question simultaneously
+- Results synthesized by coordinator
+- **Use Case**: "How does authentication work across the entire stack?"
+
+#### **Sequential Pattern**
+- Question flows through agents in logical order
+- Each agent adds context for the next
+- **Use Case**: "What → How → Why" question progressions
+
+#### **Conditional Pattern**
+- Agent selection based on question complexity and confidence scores
+- Lightweight questions use simple agents
+- Complex questions trigger multi-agent workflows
+
+### **Implementation Benefits**
+
+#### **Efficiency**
+- Simple questions get fast, focused answers
+- Complex questions get comprehensive coverage
+- No over-engineering for basic queries
+
+#### **Expertise**
+- Each domain specialist becomes expert in their area
+- Question-type optimization improves answer quality
+- Router learns optimal agent combinations over time
+
+#### **Scalability**
+- Easy to add new domain specialists (mobile, ML, security, etc.)
+- Question types can be refined based on usage patterns
+- Agent combinations optimized based on success metrics
+
+#### **User Experience**
+- Natural question asking (no need to specify which agent)
+- Consistent quality regardless of question complexity
+- Follow-up questions maintain context and specialist assignment
+
+### **Future Enhancements**
+
+#### **Context-Aware Routing**
+- Router maintains conversation history
+- Follow-up questions routed to same specialist for continuity
+- Cross-agent knowledge sharing
+
+#### **Confidence-Based Escalation**
+- Simple agent attempts answer first
+- Low confidence triggers escalation to more sophisticated agents
+- Balances speed vs. accuracy
+
+#### **Cross-Agent Learning**
+- Agents share findings with each other
+- Architecture discoveries inform implementation agent searches
+- Collaborative knowledge graph building
+
+---
+
+# Individual Agent Improvements (Current Implementation)
+
 ## 1. Top-K Retrieval Agent
 
 ### Current Issues:
