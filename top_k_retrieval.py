@@ -7,6 +7,7 @@ for clear, specific questions. It performs data ingestion and vectorization auto
 
 Usage:
     python top_k_retrieval.py "Provide an architectural analysis of the StravaService"
+    python top_k_retrieval.py "How does authentication work?" --repo /path/to/repo
 
 Use Case: Getting a quick, high-level analysis based on the most relevant files.
 """
@@ -356,6 +357,7 @@ def main():
     """Main entry point for Top-K Retrieval prototype."""
     parser = argparse.ArgumentParser(description="RAG-based Code Expert Agent (Top-K Retrieval)")
     parser.add_argument("question", type=str, help="The question to ask the agent.")
+    parser.add_argument("--repo", help="Repository path to analyze")
     args = parser.parse_args()
     
     # Load configuration and pull models if needed
@@ -365,6 +367,10 @@ def main():
     
     pull_ollama_model(llm_model)
     pull_ollama_model(embedding_model)
+    
+    # Set repo path for data ingestion
+    if args.repo:
+        os.environ["REPO_PATH"] = args.repo
     
     # Run the agent
     agent = TopKAgent()

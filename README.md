@@ -32,14 +32,17 @@ This project contains four distinct prototypes for a RAG-based (Retrieval-Augmen
 pip install -r requirements.txt
 ```
 
-**Configure Repository:** Edit `config.yaml` and set `repository.local_path` to your code repository path.
-
 **Configure API Key (if using WCA):** Create a `.env` file:
 ```bash
 WCA_API_KEY=YOUR_API_KEY_HERE
 ```
 
 **Choose Provider:** In `config.yaml`, set `llm.provider` to `"ollama"` or `"wca"`.
+
+**Repository Configuration:** You can specify repositories in three ways:
+1. **Command line (recommended)**: `--repo /path/to/your/repo`
+2. **Environment variable**: `REPO_PATH=/path/to/your/repo`
+3. **Config file**: Edit `config.yaml` and set `repository.local_path`
 
 ### 2. Run Any Prototype
 
@@ -51,16 +54,20 @@ All prototypes are now single files you can run directly:
 
 ```bash
 # Architectural questions get architecture-focused analysis
-python top_k_retrieval.py "What is the overall system architecture?"
+python top_k_retrieval.py "What is the overall system architecture?" --repo /path/to/repo
 
 # Implementation questions get step-by-step explanations  
-python top_k_retrieval.py "How does the authentication process work?"
+python top_k_retrieval.py "How does the authentication process work?" --repo /path/to/repo
 
 # Entity-specific questions get detailed component analysis
-python top_k_retrieval.py "What does the UserService class do?"
+python top_k_retrieval.py "What does the UserService class do?" --repo /path/to/repo
 
 # Design rationale questions get decision-focused responses
-python top_k_retrieval.py "Why was this database design chosen?"
+python top_k_retrieval.py "Why was this database design chosen?" --repo /path/to/repo
+
+# Or use environment variable for multiple queries
+export REPO_PATH=/path/to/your/repo
+python top_k_retrieval.py "What is the system architecture?"
 ```
 
 ---
@@ -73,13 +80,13 @@ This "MapReduce" agent analyzes every single file, making it extremely thorough 
 
 ```bash
 # Perfect for comprehensive analysis questions
-python iterate_and_synthesize.py "Provide a complete architectural overview of this project"
+python iterate_and_synthesize.py "Provide a complete architectural overview of this project" --repo /path/to/repo
 
 # Great for understanding entire system workflows  
-python iterate_and_synthesize.py "How does data flow through the entire application?"
+python iterate_and_synthesize.py "How does data flow through the entire application?" --repo /path/to/repo
 
 # Ideal for broad technology stack analysis
-python iterate_and_synthesize.py "What technologies and patterns are used throughout this codebase?"
+python iterate_and_synthesize.py "What technologies and patterns are used throughout this codebase?" --repo /path/to/repo
 ```
 
 ---
@@ -92,16 +99,16 @@ The most powerful prototype for specific, targeted questions about code entities
 
 ```bash
 # Perfect for exploring specific entities and their relationships
-python graph_based_retrieval.py "explain the LoginViewModel class and its dependencies"
+python graph_based_retrieval.py "explain the LoginViewModel class and its dependencies" --repo /path/to/repo
 
 # Great for understanding component interactions
-python graph_based_retrieval.py "how is the PaymentProcessor used throughout the system?"
+python graph_based_retrieval.py "how is the PaymentProcessor used throughout the system?" --repo /path/to/repo
 
 # Ideal for finding related functionality
-python graph_based_retrieval.py "what classes interact with the DatabaseManager?"
+python graph_based_retrieval.py "what classes interact with the DatabaseManager?" --repo /path/to/repo
 
 # Optional: Build graph manually first
-python graph_based_retrieval.py --build-graph
+python graph_based_retrieval.py --build-graph --repo /path/to/repo
 ```
 
 ---
@@ -114,20 +121,20 @@ A hybrid agent with **intelligent strategy selection** that adapts to your quest
 
 ```bash
 # Broad questions automatically use wide search strategy
-python multi_representation.py "explain this entire repository structure"
+python multi_representation.py "explain this entire repository structure" --repo /path/to/repo
 
 # Specific questions automatically use focused search strategy  
-python multi_representation.py "how does the calculateTax function work?"
+python multi_representation.py "how does the calculateTax function work?" --repo /path/to/repo
 
 # Complex questions automatically use deep-dive strategy
-python multi_representation.py "explain the complete user authentication and authorization flow"
+python multi_representation.py "explain the complete user authentication and authorization flow" --repo /path/to/repo
 
 # Manual strategy override (optional)
-python multi_representation.py "system overview" --strategy broad
-python multi_representation.py "specific class details" --strategy specific
+python multi_representation.py "system overview" --strategy broad --repo /path/to/repo
+python multi_representation.py "specific class details" --strategy specific --repo /path/to/repo
 
 # Optional: Build representations manually first  
-python multi_representation.py --build-representations
+python multi_representation.py --build-representations --repo /path/to/repo
 ```
 
 ---
@@ -157,10 +164,17 @@ The multi-representation agent intelligently selects optimal strategies:
 
 ```bash
 # These automatically get optimal treatment:
-"Explain the entire application" → broad strategy, architectural prompting
-"What does calculateTax() do?" → focused strategy, entity-specific prompting  
-"How does the complex payment flow work?" → deep_dive strategy, implementation prompting
-"Why was Redis chosen for caching?" → hybrid strategy, rationale prompting
+python multi_representation.py "Explain the entire application" --repo /path/to/repo
+# → broad strategy, architectural prompting
+
+python multi_representation.py "What does calculateTax() do?" --repo /path/to/repo  
+# → focused strategy, entity-specific prompting
+
+python multi_representation.py "How does the complex payment flow work?" --repo /path/to/repo
+# → deep_dive strategy, implementation prompting
+
+python multi_representation.py "Why was Redis chosen for caching?" --repo /path/to/repo
+# → hybrid strategy, rationale prompting
 ```
 
 ---
