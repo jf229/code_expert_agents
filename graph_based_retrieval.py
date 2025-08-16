@@ -320,7 +320,7 @@ Architectural Analysis:"""
             wca_service = self._setup_provider()
             
             # Get relevant documents from graph
-            docs = retriever.get_relevant_documents(question)
+            docs = retriever.invoke(question)
             print(f"Retrieved {len(docs)} documents from graph search.")
             
             if not docs:

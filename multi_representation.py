@@ -464,7 +464,7 @@ Architectural Analysis:"""
             wca_service = self._setup_provider()
             
             # Get relevant documents
-            docs = retriever.get_relevant_documents(question)
+            docs = retriever.invoke(question)
             print(f"Retrieved {len(docs)} documents using {strategy} strategy.")
             
             if not docs:

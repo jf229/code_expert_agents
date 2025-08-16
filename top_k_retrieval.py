@@ -292,7 +292,7 @@ Architectural Analysis:"""
             
             # Get top-k documents
             top_k = self.config["retrieval"]["top_k"]
-            docs = retriever.get_relevant_documents(question, k=top_k)
+            docs = retriever.invoke(question, k=top_k)
             
             # Get analysis from WCA
             print("Sending query to WCA...")
@@ -316,7 +316,7 @@ Architectural Analysis:"""
             
             # Get top-k documents
             top_k = self.config["retrieval"]["top_k"]
-            docs = retriever.get_relevant_documents(question, k=top_k)
+            docs = retriever.invoke(question, k=top_k)
             
             # Create dynamic prompt based on question type
             question_type = self._classify_question_type(question)
