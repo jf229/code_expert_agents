@@ -14,6 +14,7 @@ gitpython
 requests
 tqdm
 networkx
+tabulate
 
 # LLM Provider APIs
 openai
