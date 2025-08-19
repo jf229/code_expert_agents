@@ -119,7 +119,7 @@ class GraphBuilder:
                         if node.type == 'class_declaration':
                             name_node = node.child_by_field_name('name')
                             if name_node:
-                                name = name_node.text.decode()
+                                name = name_node.text.decode('utf-8')
                                 node_id = f"{file_path}::{name}"
                                 G.add_node(node_id, type='class', name=name, file=file_path)
                                 G.add_edge(file_path, node_id, type='contains')
@@ -127,7 +127,7 @@ class GraphBuilder:
                         elif node.type == 'function_declaration':
                             name_node = node.child_by_field_name('name')
                             if name_node:
-                                name = name_node.text.decode()
+                                name = name_node.text.decode('utf-8')
                                 node_id = f"{file_path}::{name}"
                                 G.add_node(node_id, type='function', name=name, file=file_path)
                                 G.add_edge(file_path, node_id, type='contains')
