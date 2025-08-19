@@ -20,7 +20,7 @@
         }
 
         .diagram-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 8px;
@@ -30,21 +30,22 @@
 
         .title {
             text-align: center;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             color: #1a1a1a;
         }
 
         .layer {
-            margin-bottom: 12px;
+            margin-bottom: 15px;
         }
 
         .layer-title {
             font-size: 16px;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             color: #2c3e50;
+            text-align: center;
         }
 
         /* Box styles */
@@ -67,6 +68,7 @@
         .box-subtitle {
             font-size: 10px;
             margin-bottom: 5px;
+            opacity: 0.8;
         }
 
         .box-content {
@@ -108,8 +110,33 @@
             border-color: #2980b9;
             color: white;
             padding: 12px;
-            width: 220px;
+            width: 200px;
             min-height: 120px;
+        }
+
+        .hierarchical-box {
+            background: #e74c3c;
+            border-color: #c0392b;
+            color: white;
+            padding: 12px;
+            width: 240px;
+            min-height: 100px;
+        }
+
+        .intelligence-box {
+            background: #8e44ad;
+            border-color: #7d3c98;
+            color: white;
+            padding: 10px;
+            width: 180px;
+        }
+
+        .testing-box {
+            background: #16a085;
+            border-color: #138d75;
+            color: white;
+            padding: 10px;
+            width: 180px;
         }
 
         /* Layouts */
@@ -135,6 +162,13 @@
             margin: 8px 0;
         }
 
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 8px 0;
+        }
+
         /* Agent sub-components */
         .agent-components {
             display: flex;
@@ -147,7 +181,7 @@
         .agent-component {
             background: rgba(255, 255, 255, 0.9);
             color: #1a1a1a;
-            padding: 4px 6px;
+            padding: 3px 5px;
             border-radius: 3px;
             font-size: 8px;
             font-weight: bold;
@@ -191,7 +225,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 20px;
             padding: 10px;
             background: #f8f9fa;
             border-radius: 6px;
@@ -217,13 +251,44 @@
             line-height: 1.3;
         }
 
+        /* Directory structure */
+        .directory-box {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 9px;
+            line-height: 1.3;
+            white-space: pre;
+            overflow-x: auto;
+            width: 40%;
+            max-width: none;
+            margin: 10px auto;
+        }
+
         /* Responsive */
-        @media (max-width: 1000px) {
+        @media (max-width: 1200px) {
             .agents-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
             
+            .tools-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 800px) {
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+            
             .storage-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tools-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
             
@@ -237,39 +302,28 @@
                 padding: 8px;
             }
             
-            .horizontal-flow {
-                flex-direction: column;
-                gap: 5px;
-            }
-            
-            .agents-grid {
-                grid-template-columns: 1fr;
-            }
-            
             .storage-grid {
                 grid-template-columns: 1fr;
             }
             
-            .agent-box {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .agent-box, .hierarchical-box, .intelligence-box, .testing-box {
                 width: 100%;
-            }
-            
-            .arrow {
-                font-size: 20px;
-            }
-            
-            .data-arrow {
-                font-size: 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="diagram-container">
-        <div class="title">RAG Code Expert Agents - Architecture & Data Flow</div>
+        <div class="title">RAG Code Expert Agents - Complete Architecture</div>
+
 
         <!-- Input & Data Ingestion Layer -->
         <div class="layer">
+            <div class="layer-title">🔄 Data Ingestion & Processing</div>
             <div class="horizontal-flow">
                 <div class="box shared-box">
                     <div class="box-title">Repository</div>
@@ -280,16 +334,17 @@
                 
                 <div class="box process-box">
                     <div class="box-title">Data Ingestion</div>
-                    <div class="box-subtitle">data_ingestion.py</div>
-                    <div class="box-content">Repository Intelligence</div>
+                    <div class="box-subtitle">shared/data_ingestion.py</div>
+                    <div class="box-content">Repository Intelligence<br>Smart Filtering</div>
                 </div>
                 
                 <span class="arrow">→</span>
                 
                 <div class="box shared-box" style="width: 300px;">
                     <div class="box-title">Shared Infrastructure</div>
+                    <div class="box-subtitle">shared/ directory</div>
                     <div class="box-content">
-                        LLM Providers • WCA Service • Response Generator • Config Manager
+                        Config • LLM Providers • WCA Service • Response Generators
                     </div>
                 </div>
                 
@@ -298,12 +353,12 @@
                 <div class="box provider-box">
                     <div class="box-title">LLM Providers</div>
                     <div class="box-subtitle">Ollama (Local)</div>
-                    <div class="box-content">WCA/OpenAI/Claude</div>
+                    <div class="box-content">WCA • OpenAI • Claude<br>Gemini</div>
                 </div>
             </div>
         </div>
 
-        <!-- Raw Documents -->
+        <!-- Raw Documents Storage -->
         <div class="layer">
             <div class="horizontal-flow">
                 <span class="arrow data-arrow">↓</span>
@@ -316,59 +371,91 @@
             </div>
         </div>
 
-        <!-- Four Agent Approaches -->
+        <!-- Core Agents -->
         <div class="layer">
+            <div class="layer-title">🤖 Core RAG Agents</div>
             <div class="horizontal-flow">
                 <span class="arrow data-arrow">↓</span>
             </div>
             <div class="agents-grid">
                 <div class="box agent-box">
                     <div class="box-title">1. Top-K Retrieval</div>
-                    <div class="box-subtitle">Baseline RAG approach</div>
+                    <div class="box-subtitle">agents/top_k_retrieval.py</div>
                     <div class="agent-components">
                         <div class="agent-component">Text Splitting</div>
                         <div class="agent-component">Vector Store</div>
-                        <div class="agent-component">ParentDocumentRetriever</div>
+                        <div class="agent-component">Semantic Search</div>
+                        <div class="agent-component">Privacy Mode</div>
                     </div>
                 </div>
 
                 <div class="box agent-box">
-                    <div class="box-title">2. Iterate & Synthesize</div>
-                    <div class="box-subtitle">MapReduce approach</div>
+                    <div class="box-title">2. Graph-Based</div>
+                    <div class="box-subtitle">agents/graph_based_retrieval.py</div>
+                    <div class="agent-components">
+                        <div class="agent-component">Auto Graph Build</div>
+                        <div class="agent-component">NetworkX</div>
+                        <div class="agent-component">Semantic Mapping</div>
+                        <div class="agent-component">Entity Retrieval</div>
+                    </div>
+                </div>
+
+                <div class="box agent-box">
+                    <div class="box-title">3. Iterate & Synthesize</div>
+                    <div class="box-subtitle">agents/iterate_and_synthesize.py</div>
                     <div class="agent-components">
                         <div class="agent-component">File Analysis</div>
-                        <div class="agent-component">Summarization</div>
+                        <div class="agent-component">MapReduce</div>
                         <div class="agent-component">Synthesis Chain</div>
-                    </div>
-                </div>
-
-                <div class="box agent-box">
-                    <div class="box-title">3. Graph-Based Retrieval</div>
-                    <div class="box-subtitle">Knowledge graph approach</div>
-                    <div class="agent-components">
-                        <div class="agent-component">Graph Builder</div>
-                        <div class="agent-component">NetworkX</div>
-                        <div class="agent-component">GraphRetriever</div>
+                        <div class="agent-component">Comprehensive</div>
                     </div>
                 </div>
 
                 <div class="box agent-box">
                     <div class="box-title">4. Multi-Representation</div>
-                    <div class="box-subtitle">Hybrid adaptive approach</div>
+                    <div class="box-subtitle">agents/multi_representation.py</div>
                     <div class="agent-components">
+                        <div class="agent-component">Auto Strategy</div>
                         <div class="agent-component">Summaries</div>
                         <div class="agent-component">Questions</div>
-                        <div class="agent-component">MultiVectorRetriever</div>
+                        <div class="agent-component">Adaptive</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Systems -->
+        <div class="layer">
+            <div class="layer-title">🏛️ Advanced Orchestration & Intelligence</div>
+            <div class="horizontal-flow">
+                <div class="box hierarchical-box">
+                    <div class="box-title">Hierarchical Coordinator</div>
+                    <div class="box-subtitle">hierarchical/coordinator.py</div>
+                    <div class="agent-components">
+                        <div class="agent-component">Question Routing</div>
+                        <div class="agent-component">Domain Specialists</div>
+                        <div class="agent-component">Multi-Agent</div>
+                        <div class="agent-component">Synthesis</div>
+                    </div>
+                </div>
+
+                <div class="box shared-box" style="width: 200px;">
+                    <div class="box-title">Question Analysis</div>
+                    <div class="box-subtitle">hierarchical/question_analyzer.py</div>
+                    <div class="box-content">Classification<br>Strategy Selection<br>Context Analysis</div>
+                </div>
+
+                <div class="box shared-box" style="width: 200px;">
+                    <div class="box-title">Domain Specialists</div>
+                    <div class="box-subtitle">hierarchical/specialists.py</div>
+                    <div class="box-content">Code Specialist<br>API Specialist<br>Architecture</div>
                 </div>
             </div>
         </div>
 
         <!-- Storage Layer -->
         <div class="layer">
-            <div class="horizontal-flow">
-                <span class="arrow data-arrow">↓</span>
-            </div>
+            <div class="layer-title">💾 Specialized Storage Systems</div>
             <div class="storage-grid">
                 <div class="box storage-box">
                     <div class="box-title">Vector Storage</div>
@@ -385,30 +472,69 @@
                 <div class="box storage-box">
                     <div class="box-title">Graph Storage</div>
                     <div class="box-subtitle">code_graph.gpickle</div>
-                    <div class="box-content">NetworkX Graph</div>
+                    <div class="box-content">NetworkX Graph<br>Auto-Generated</div>
                 </div>
 
                 <div class="box storage-box">
                     <div class="box-title">Multi-Representations</div>
                     <div class="box-subtitle">multi_representations.pkl</div>
-                    <div class="box-content">Summaries + Questions</div>
+                    <div class="box-content">Summaries + Questions<br>Adaptive Strategies</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intelligence & Testing Tools -->
+        <div class="layer">
+            <div class="layer-title">🧠 Intelligence & Testing Tools</div>
+            <div class="tools-grid">
+                <div class="box intelligence-box">
+                    <div class="box-title">Repository Intelligence</div>
+                    <div class="box-subtitle">intelligence/repository_intelligence.py</div>
+                    <div class="box-content">Language Detection<br>Smart Filtering<br>Optimization</div>
+                </div>
+
+                <div class="box intelligence-box">
+                    <div class="box-title">Workspace Manager</div>
+                    <div class="box-subtitle">intelligence/workspace_manager.py</div>
+                    <div class="box-content">Multi-Repo<br>Analysis<br>Reports</div>
+                </div>
+
+                <div class="box intelligence-box">
+                    <div class="box-title">Privacy Manager</div>
+                    <div class="box-subtitle">intelligence/privacy_manager.py</div>
+                    <div class="box-content">Data Sanitization<br>Audit Logging<br>Air-Gapped</div>
+                </div>
+
+                <div class="box testing-box">
+                    <div class="box-title">Agent Testing</div>
+                    <div class="box-subtitle">test_agents.py</div>
+                    <div class="box-content">All 5 Agents<br>Performance Metrics<br>Success Rates</div>
+                </div>
+
+                <div class="box testing-box">
+                    <div class="box-title">Model Evaluation</div>
+                    <div class="box-subtitle">model_evaluation.py</div>
+                    <div class="box-content">Ollama Models<br>Quality Scoring<br>Benchmarks</div>
                 </div>
             </div>
         </div>
 
         <!-- Query Processing -->
         <div class="layer">
+            <div class="layer-title">⚡ Query Processing & Response</div>
             <div class="horizontal-flow">
                 <span class="arrow">↓</span>
             </div>
             <div class="horizontal-flow">
-                <div class="box process-box" style="width: 600px;">
-                    <div class="box-title">Query Processing & Response Generation</div>
+                <div class="box process-box" style="width: 700px;">
+                    <div class="box-title">Unified Query Processing Pipeline</div>
                     <div class="process-steps">
-                        <div class="process-step">1. Question Classification</div>
-                        <div class="process-step">2. Retrieval Strategy</div>
-                        <div class="process-step">3. Context Formation</div>
-                        <div class="process-step">4. LLM Generation</div>
+                        <div class="process-step">1. Question Analysis</div>
+                        <div class="process-step">2. Agent Selection</div>
+                        <div class="process-step">3. Strategy Execution</div>
+                        <div class="process-step">4. Context Formation</div>
+                        <div class="process-step">5. LLM Generation</div>
+                        <div class="process-step">6. Response Formatting</div>
                     </div>
                 </div>
             </div>
@@ -420,9 +546,9 @@
                 <span class="arrow">↓</span>
             </div>
             <div class="horizontal-flow">
-                <div class="box shared-box" style="width: 250px;">
-                    <div class="box-title">Unified Response</div>
-                    <div class="box-content">Formatted Answer • Source References</div>
+                <div class="box shared-box" style="width: 300px;">
+                    <div class="box-title">Unified Response Output</div>
+                    <div class="box-content">Formatted Answer • Source References • Performance Metrics</div>
                 </div>
             </div>
         </div>
@@ -430,36 +556,36 @@
         <!-- Legend -->
         <div class="legend">
             <div class="legend-section">
-                <div class="legend-title">Data Flow Legend</div>
-                <div class="legend-item"><span style="color: #3498db;">→</span> Process Flow</div>
-                <div class="legend-item"><span style="color: #e74c3c;">↓</span> Data Storage</div>
-                <div class="legend-item">Each agent implements a different retrieval strategy:</div>
-                <div class="legend-item">• <strong>Top-K:</strong> Fast similarity search (k=5 documents)</div>
-                <div class="legend-item">• <strong>Iterate:</strong> Process all files, synthesize comprehensive view</div>
-                <div class="legend-item">• <strong>Graph:</strong> NetworkX knowledge graph with entity relationships</div>
-                <div class="legend-item">• <strong>Multi-Rep:</strong> Adaptive strategy selection based on question type</div>
+                <div class="legend-title">🎯 Agent Performance</div>
+                <div class="legend-item">From comprehensive testing (test_agents.py):</div>
+                <div class="legend-item">• <strong>Graph-Based:</strong> Fastest (7s avg), targeted questions</div>
+                <div class="legend-item">• <strong>Hierarchical:</strong> Fast coordination (11s avg), intelligent routing</div>
+                <div class="legend-item">• <strong>Top-K:</strong> Reliable baseline (29s avg), 40% success rate</div>
+                <div class="legend-item">• <strong>Iterate:</strong> Most comprehensive (134s avg), 100% success</div>
+                <div class="legend-item">• <strong>Multi-Rep:</strong> Adaptive strategies, variable performance</div>
             </div>
 
             <div class="legend-section">
-                <div class="legend-title">Key Features</div>
-                <div class="legend-item">• Multi-provider LLM support (Ollama, WCA, OpenAI, Claude)</div>
-                <div class="legend-item">• Local embeddings for privacy (Ollama)</div>
-                <div class="legend-item">• Intelligent document filtering & repository analysis</div>
-                <div class="legend-item">• Unified response generation with source attribution</div>
-                <div class="legend-item">• Central configuration management</div>
-                <div class="legend-item">• Extensible plugin architecture</div>
+                <div class="legend-title">🏗️ Architecture Features</div>
+                <div class="legend-item">• <strong>Directory Organization:</strong> Clean separation of concerns</div>
+                <div class="legend-item">• <strong>Shared Infrastructure:</strong> Modular, reusable components</div>
+                <div class="legend-item">• <strong>Multi-Provider LLM:</strong> Ollama, WCA, OpenAI, Claude, Gemini</div>
+                <div class="legend-item">• <strong>Local-First Privacy:</strong> Ollama embeddings, optional sanitization</div>
+                <div class="legend-item">• <strong>Comprehensive Testing:</strong> Automated evaluation & benchmarking</div>
+                <div class="legend-item">• <strong>Intelligence Layer:</strong> Repository analysis & optimization</div>
             </div>
 
             <div class="legend-section">
-                <div class="legend-title">Best Use Cases</div>
-                <div class="legend-item"><strong>Top-K:</strong> Quick specific questions</div>
-                <div class="legend-item"><strong>Iterate:</strong> Full project overview</div>
-                <div class="legend-item"><strong>Graph:</strong> Entity relationships & dependencies</div>
-                <div class="legend-item"><strong>Multi-Rep:</strong> Adaptive analysis for varied question types</div>
-                <div class="legend-item"><br><strong>All agents share:</strong></div>
-                <div class="legend-item">• Central configuration (config.yaml)</div>
-                <div class="legend-item">• Shared services and infrastructure</div>
-                <div class="legend-item">• Consistent response formatting</div>
+                <div class="legend-title">🎨 Selection Guide</div>
+                <div class="legend-item"><strong>Quick Entity Questions:</strong> Graph-Based</div>
+                <div class="legend-item"><strong>Complete Architecture:</strong> Iterate & Synthesize</div>
+                <div class="legend-item"><strong>General Questions:</strong> Top-K Retrieval</div>
+                <div class="legend-item"><strong>Adaptive Analysis:</strong> Multi-Representation</div>
+                <div class="legend-item"><strong>Complex Multi-Domain:</strong> Hierarchical Coordinator</div>
+                <div class="legend-item"><br><strong>Testing & Optimization:</strong></div>
+                <div class="legend-item">• Use test_agents.py for comprehensive evaluation</div>
+                <div class="legend-item">• Use model_evaluation.py for model comparison</div>
+                <div class="legend-item">• Use workspace_manager.py for repository analysis</div>
             </div>
         </div>
     </div>
