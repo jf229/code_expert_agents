@@ -9,6 +9,7 @@ import openai
 import requests
 from abc import ABC, abstractmethod
 from typing import Dict, Any
+from .wca_service import WCAService
 
 
 class LLMProvider(ABC):
@@ -150,6 +151,44 @@ class OllamaProvider(LLMProvider):
             raise Exception(f"Ollama API error: {e}")
 
 
+class WCAProvider(LLMProvider):
+    """Watson Code Assistant provider."""
+    
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or os.getenv("WCA_API_KEY")
+        if not self.api_key:
+            raise ValueError("WCA API key is required")
+        self.wca_service = WCAService(self.api_key)
+    
+    def generate_response(self, prompt: str, **kwargs) -> str:
+        """Generate response using WCA API."""
+        try:
+            # Use WCA's architectural analysis method for structured responses
+            payload = {
+                "message_payload": {
+                    "messages": [{"content": prompt, "role": "USER"}],
+                    "chat_session_id": str(__import__('uuid').uuid4())
+                }
+            }
+            
+            response = self.wca_service._call_wca_api(payload)
+            
+            # Extract the response text from WCA's response format
+            if isinstance(response, dict):
+                # Handle WCA's response structure
+                if 'results' in response and response['results']:
+                    return response['results'][0].get('generated_text', str(response))
+                elif 'generated_text' in response:
+                    return response['generated_text']
+                else:
+                    return str(response)
+            else:
+                return str(response)
+                
+        except Exception as e:
+            raise Exception(f"WCA API error: {e}")
+
+
 def get_llm_provider(provider_type: str, **kwargs) -> LLMProvider:
     """Factory function to get LLM provider instance."""
     
@@ -157,7 +196,8 @@ def get_llm_provider(provider_type: str, **kwargs) -> LLMProvider:
         "openai": OpenAIProvider,
         "claude": ClaudeProvider, 
         "gemini": GeminiProvider,
-        "ollama": OllamaProvider
+        "ollama": OllamaProvider,
+        "wca": WCAProvider
     }
     
     if provider_type not in providers:

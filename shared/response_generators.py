@@ -24,28 +24,28 @@ class UnifiedResponseGenerator:
         llm_config = config.get("llm", {})
         provider_type = llm_config.get("provider", "ollama")
         
+        # Use unified provider interface with privacy hardening
+        model = llm_config.get("models", {}).get(provider_type, "granite3.2:8b")
+        
+        # Apply privacy policies to provider config
+        provider_config = {"provider": provider_type, "model": model}
+        provider_config = self.policy_gate.enforce_provider_safety(provider_config)
+        
+        # Extract privacy headers for provider initialization
+        extra_headers = provider_config.get("extra_headers")
+        provider_kwargs = {"model": model} if provider_type != "wca" else {}
+        if extra_headers:
+            provider_kwargs["extra_headers"] = extra_headers
+        
+        self.llm_provider = get_llm_provider(provider_type, **provider_kwargs)
+        
+        # Keep WCA service for legacy methods that still need it
         if provider_type == "wca":
-            # Keep WCA for backward compatibility
             api_key = os.environ.get("WCA_API_KEY")
             if not api_key:
                 raise ValueError("WCA_API_KEY not found in environment variables.")
             self.wca_service = WCAService(api_key=api_key)
-            self.llm_provider = None
         else:
-            # Use new provider interface with privacy hardening
-            model = llm_config.get("models", {}).get(provider_type, "granite3.2:8b")
-            
-            # Apply privacy policies to provider config
-            provider_config = {"provider": provider_type, "model": model}
-            provider_config = self.policy_gate.enforce_provider_safety(provider_config)
-            
-            # Extract privacy headers for provider initialization
-            extra_headers = provider_config.get("extra_headers")
-            provider_kwargs = {"model": model}
-            if extra_headers:
-                provider_kwargs["extra_headers"] = extra_headers
-            
-            self.llm_provider = get_llm_provider(provider_type, **provider_kwargs)
             self.wca_service = None
     
     def generate_response_with_context(self, question, documents):
@@ -73,17 +73,12 @@ User's Question: {question}
 Provide a detailed technical analysis:"""
 
         try:
-            if self.wca_service:
-                # Use WCA service with sanitized documents
-                response = self.wca_service.get_architectural_analysis(question, sanitized_documents)
-                answer = response.get("choices", [{}])[0].get("message", {}).get("content", "No response")
-            else:
-                # Use unified provider interface
-                answer = self.llm_provider.generate_response(
-                    prompt,
-                    temperature=self.config.get("llm", {}).get("temperature", 0.1),
-                    max_tokens=self.config.get("llm", {}).get("max_tokens", 4000)
-                )
+            # Use unified provider interface for all providers including WCA
+            answer = self.llm_provider.generate_response(
+                prompt,
+                temperature=self.config.get("llm", {}).get("temperature", 0.1),
+                max_tokens=self.config.get("llm", {}).get("max_tokens", 4000)
+            )
             
             # Log successful external LLM call
             if self.privacy_manager.enabled and self.config.get("llm", {}).get("provider") != "ollama":

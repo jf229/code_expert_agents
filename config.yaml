@@ -20,6 +20,7 @@ llm:
     openai: "gpt-4"
     claude: "claude-3-sonnet-20240229"
     gemini: "gemini-pro"
+    wca: "watsonx-code-assistant"
   
   # Generation parameters
   temperature: 0.1
