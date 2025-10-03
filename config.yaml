@@ -12,8 +12,8 @@ repository:
 # Choose the provider for generating answers.
 # Options: "ollama", "openai", "claude", "gemini", "wca"
 llm:
-  provider: "ollama"
-  
+  provider: "wca"
+
   # Provider-specific model settings
   models:
     ollama: "granite3.2:8b"
@@ -21,7 +21,7 @@ llm:
     claude: "claude-3-sonnet-20240229"
     gemini: "gemini-pro"
     wca: "watsonx-code-assistant"
-  
+
   # Generation parameters
   temperature: 0.1
   max_tokens: 4000
@@ -49,7 +49,7 @@ storage:
   raw_docs: "raw_documents.pkl"
   code_graph: "code_graph.gpickle"
   multi_representations: "multi_representations.pkl"
-  
+
   # Intelligence Storage (auto-created)
   repo_metadata: "repository_metadata.pkl"
   intelligence_cache: ".repo_intelligence"
@@ -60,20 +60,20 @@ storage:
 intelligence:
   # Enable automatic repository analysis
   auto_analyze: true
-  
+
   # Language focus (auto-detected but can be overridden)
   # focus_languages: ["Python", "JavaScript"]
-  
+
   # Custom exclusion patterns (in addition to intelligent recommendations)
   custom_excludes:
     - "*.log"
     - "temp/*"
     - "scratch/*"
-  
+
   # Processing optimization
   enable_batching: true
   cache_analysis: true
-  
+
   # Multi-repository features
   enable_workspace_mode: false
   cross_repo_analysis: false
@@ -83,29 +83,29 @@ intelligence:
 privacy:
   # Enable privacy protection features (disabled by default for testing)
   enable: false
-  
+
   # Privacy mode: fast (basic), strict (comprehensive), air-gapped (local only)
   mode: "fast"
-  
+
   # Sanitization options
   pseudonymize_identifiers: true    # Replace class/function/variable names
   hide_paths: true                  # Redact file paths to generic IDs
   strip_comments: false             # Remove comments from code
   redact_literals: []               # Options: ["urls", "emails", "long_strings"]
-  
+
   # Query limits for external LLMs
   max_snippets_per_query: 6         # Limit number of code snippets sent
   max_chars_per_query: 18000        # Limit total characters per query
-  
+
   # Audit and compliance
   audit_log: ".privacy/audit.log"   # Log all external LLM interactions
-  
+
   # File filtering (additional privacy-specific filters)
-  denylist_globs: 
+  denylist_globs:
     - "**/secrets/**"
     - "**/config/prod/**"
     - "**/.env*"
-  
+
   # Provider safety settings
   require_no_training: true         # Enforce no-training flags on external providers
   prefer_regional_endpoints: false  # Use regional endpoints when available

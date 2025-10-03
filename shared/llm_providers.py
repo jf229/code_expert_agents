@@ -174,16 +174,13 @@ class WCAProvider(LLMProvider):
             response = self.wca_service._call_wca_api(payload)
             
             # Extract the response text from WCA's response format
-            if isinstance(response, dict):
-                # Handle WCA's response structure
-                if 'results' in response and response['results']:
-                    return response['results'][0].get('generated_text', str(response))
-                elif 'generated_text' in response:
-                    return response['generated_text']
-                else:
-                    return str(response)
-            else:
-                return str(response)
+            if (response and 'response' in response and 
+                'message' in response['response'] and 
+                'content' in response['response']['message']):
+                return response['response']['message']['content']
+            
+            # Fallback if the structure is unexpected
+            return str(response)
                 
         except Exception as e:
             raise Exception(f"WCA API error: {e}")

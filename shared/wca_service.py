@@ -43,10 +43,15 @@ class WCAService:
         """Make a call to the WCA API with optional file attachments."""
         try:
             token = self.get_bearer_token()
+            request_id = str(uuid.uuid4())
             headers = {
                 "Authorization": f"Bearer {token}",
-                "Request-ID": str(uuid.uuid4())
+                "Request-ID": request_id
             }
+            
+            print(f"--- Sending request to WCA API ---")
+            print(f"Request ID: {request_id}")
+            print(f"URL: {self.wca_url}")
             
             payload_b64_string = base64.b64encode(
                 json.dumps(payload_dict).encode('utf-8')
@@ -55,6 +60,7 @@ class WCAService:
             files_to_send = [('message', (None, payload_b64_string))]
             
             if files_dict:
+                print(f"Attaching {len(files_dict)} files to the request.")
                 for file_path, file_content in files_dict.items():
                     encoded_content = base64.b64encode(
                         file_content.encode()
@@ -71,10 +77,14 @@ class WCAService:
                 timeout=180
             )
             
+            print(f"--- WCA API Response ---")
+            print(f"Status Code: {response.status_code}")
+            
             if not response.ok:
                 print(f"Error from WCA API. Status: {response.status_code}. Response: {response.text}")
                 response.raise_for_status()
             
+            print("Request successful.")
             return response.json()
             
         except requests.exceptions.RequestException as e:
