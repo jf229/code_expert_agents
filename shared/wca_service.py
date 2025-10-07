@@ -91,6 +91,48 @@ class WCAService:
             print(f"Error calling WCA API: {e}")
             raise
 
+    # --- Convenience helpers -------------------------------------------------
+    def extract_generated_text(self, response_json):
+        """Best-effort extraction of generated text from WCA (and similar) responses.
+
+        Supports multiple shapes:
+        - {"results": [{"generated_text": "..."}]}
+        - {"generated_text": "..."}
+        - OpenAI-like: {"choices": [{"message": {"content": "..."}}]}
+        - Fallback: stringified JSON
+        """
+        try:
+            if isinstance(response_json, dict):
+                # WCA preferred shape
+                if response_json.get("results"):
+                    first = response_json["results"][0]
+                    # Common fields seen in WCA responses
+                    text = (
+                        first.get("generated_text")
+                        or first.get("text")
+                        or (first.get("message") or {}).get("content")
+                    )
+                    if text:
+                        return text
+
+                # Direct generated_text field
+                if "generated_text" in response_json:
+                    return response_json.get("generated_text")
+
+                # Be lenient and support OpenAI-like shapes (defensive)
+                if response_json.get("choices"):
+                    choices = response_json.get("choices") or []
+                    if choices:
+                        msg = choices[0].get("message") or {}
+                        text = msg.get("content") or choices[0].get("text")
+                        if text:
+                            return text
+
+            # Fallback: stringify
+            return str(response_json)
+        except Exception:
+            return str(response_json)
+
     def _classify_question_type(self, question):
         """Classify question to use appropriate prompt strategy."""
         question_lower = question.lower()

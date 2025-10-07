@@ -133,12 +133,12 @@ Questions:"""
                     content = f.read()
                 
                 if self.provider == "wca":
-                    # Use WCA service
-                    summary_response = wca_service.summarize_file(file_path, content)
-                    summary = summary_response.get("choices", [{}])[0].get("message", {}).get("content", "No summary available")
-                    
-                    questions_response = wca_service.generate_hypothetical_questions(file_path, content)
-                    questions_text = questions_response.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    # Use WCA service and normalize output
+                    summary_resp = wca_service.summarize_file(file_path, content)
+                    summary = wca_service.extract_generated_text(summary_resp) or "No summary available"
+
+                    questions_resp = wca_service.generate_hypothetical_questions(file_path, content)
+                    questions_text = wca_service.extract_generated_text(questions_resp) or ""
                     questions = [q.strip() for q in questions_text.split('\n') if q.strip()]
                 else:
                     # Use Ollama
@@ -484,11 +484,11 @@ Architectural Analysis:"""
             print("Sending query to WCA...")
             try:
                 wca_response = wca_service.get_architectural_analysis(question, docs)
-                
-                # Format response for consistency
+                answer_text = wca_service.extract_generated_text(wca_response) or "No response"
+
                 qa_result = {
                     "question": question,
-                    "answer": wca_response.get("choices", [{}])[0].get("message", {}).get("content", "No response"),
+                    "answer": answer_text,
                     "source_documents": docs
                 }
                 

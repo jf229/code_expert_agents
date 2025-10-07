@@ -24,18 +24,32 @@ except ImportError:
 
 # This is now the central list of supported languages
 COMMON_LANGUAGE_EXTENSIONS = {
+    # Languages
     "Assembly": ".asm", "Bash": ".sh", "C": ".c", "C++": ".cpp", "C#": ".cs",
     "Clojure": ".clj", "CMake": ".cmake", "CoffeeScript": ".coffee", "CSS": ".css",
-    "Dart": ".dart", "Dockerfile": ".dockerfile", "Elixir": ".ex", "Erlang": ".erl",
+    "Dart": ".dart", "Elixir": ".ex", "Erlang": ".erl",
     "Go": ".go", "Groovy": ".groovy", "Haskell": ".hs", "HTML": ".html", "Java": ".java",
     "JavaScript": ".js", "JSON": ".json", "JSX": ".jsx", "Julia": ".jl",
     "Jupyter Notebook": ".ipynb", "Kotlin": ".kt", "LaTeX": ".tex", "Lisp": ".lisp",
-    "Lua": ".lua", "Makefile": ".mk", "Markdown": ".md", "MATLAB": ".m",
+    "Lua": ".lua", "Markdown": ".md", "MATLAB": ".m",
     "Objective-C": ".m", "OCaml": ".ml", "Perl": ".pl", "PHP": ".php",
     "PowerShell": ".ps1", "Python": ".py", "R": ".r", "Ruby": ".rb", "Rust": ".rs",
     "Scala": ".scala", "SCSS": ".scss", "SQL": ".sql", "Swift": ".swift",
     "Svelte": ".svelte", "TeX": ".tex", "TOML": ".toml", "TypeScript": ".ts",
-    "TSX": ".tsx", "Vue": ".vue", "XML": ".xml", "YAML": ".yaml", "YML": ".yml"
+    "TSX": ".tsx", "Vue": ".vue", "XML": ".xml", "YAML": ".yaml", "YML": ".yml",
+
+    # Common config/docs (by filename or extra ext)
+    "Dockerfile": "Dockerfile",
+    "dockerfile": "dockerfile",
+    "Makefile": "Makefile",
+    "MakeInclude": ".mk",
+    "Requirements": "requirements.txt",
+    "GoMod": "go.mod",
+    "CargoToml": "Cargo.toml",
+    "PomXML": "pom.xml",
+    "BuildGradle": "build.gradle",
+    "TSConfig": "tsconfig.json",
+    "Text": ".txt"
 }
 
 def get_repo(config, repo_path=None):

@@ -46,6 +46,7 @@ from langchain.schema import Document
 
 # Import shared services and central data ingestion
 from shared import WCAService, ResponseGenerator, load_config, setup_and_pull_models, data_ingestion_main
+from shared.data_ingestion import COMMON_LANGUAGE_EXTENSIONS
 
 
 
@@ -148,23 +149,25 @@ class GraphBuilder:
         
         print("Building basic file graph...")
         
-        # Common source file extensions
-        source_extensions = {'.py', '.js', '.ts', '.java', '.cpp', '.c', '.h', '.swift', '.kt', '.rb', '.go', '.rs'}
+        # Use the same inclusion rules as shared ingestion: support both suffixes and filenames
+        tokens = set(COMMON_LANGUAGE_EXTENSIONS.values())
         
         for root, dirs, files in os.walk(repo_path):
             # Skip hidden directories and common ignore patterns
             dirs[:] = [d for d in dirs if not d.startswith('.') and d not in {'__pycache__', 'node_modules', 'venv', '.venv'}]
             
             for file in files:
-                if any(file.endswith(ext) for ext in source_extensions):
-                    file_path = os.path.join(root, file)
+                file_path = os.path.join(root, file)
+                suffix = os.path.splitext(file)[1]
+                # Include if matches known suffix or recognized filename
+                if (suffix in tokens) or (file in tokens):
                     relative_path = os.path.relpath(file_path, repo_path)
                     
                     # Add file node with relative path for cleaner display
                     G.add_node(file_path, type='file', name=file, relative_path=relative_path)
                     
                     # For Python files, try to extract basic class/function info
-                    if file.endswith('.py'):
+                    if suffix == '.py':
                         self._add_python_entities(G, file_path, relative_path)
         
         print(f"Built basic graph with {G.number_of_nodes()} file nodes and {G.number_of_edges()} edges.")

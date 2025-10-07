@@ -106,7 +106,7 @@ Architectural Analysis:"""
                 
                 # Get summary from WCA
                 response = wca_service.summarize_file(file_path, file_content)
-                summary_content = response.get("choices", [{}])[0].get("message", {}).get("content", "No summary available")
+                summary_content = wca_service.extract_generated_text(response) or "No summary available"
                 
                 summary_text = f"**{os.path.basename(file_path)}:**\n{summary_content}\n"
                 summaries.append(summary_text)
@@ -122,7 +122,7 @@ Architectural Analysis:"""
         print("Synthesizing architectural analysis using WCA...")
         try:
             response = wca_service.synthesize_summaries(all_summaries)
-            final_analysis = response.get("choices", [{}])[0].get("message", {}).get("content", "No analysis available")
+            final_analysis = wca_service.extract_generated_text(response) or "No analysis available"
             return final_analysis
         except Exception as e:
             print(f"Error synthesizing summaries: {e}")
