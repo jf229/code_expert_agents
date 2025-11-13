@@ -18,3 +18,9 @@ chroma.sqlite3
 .vscode/
 .idea/
 .DS_Store
+
+# Temporary files
+temp/
+
+# Project-specific storage (per-repository analysis)
+project_storage/

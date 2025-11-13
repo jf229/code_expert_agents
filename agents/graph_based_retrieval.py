@@ -47,15 +47,18 @@ from langchain.schema import Document
 # Import shared services and central data ingestion
 from shared import WCAService, ResponseGenerator, load_config, setup_and_pull_models, data_ingestion_main
 from shared.data_ingestion import COMMON_LANGUAGE_EXTENSIONS
+from shared.base_agent import BaseAgent
+from shared.storage_manager import get_project_file_path, ensure_project_storage
 
 
 
 class GraphBuilder:
     """Builds a knowledge graph from repository source code."""
-    
-    def __init__(self, config):
+
+    def __init__(self, config, repo_path: str = None):
         self.config = config
         self.storage_config = config["storage"]
+        self.repo_path = repo_path
     
     def build_graph(self, repo_path):
         """Build a knowledge graph from repository source code."""
@@ -204,10 +207,14 @@ class GraphBuilder:
     
     def save_graph(self, graph):
         """Save the graph to disk."""
-        output_path = self.storage_config["code_graph"]
+        if self.repo_path:
+            output_path = get_project_file_path(self.repo_path, "code_graph.gpickle")
+        else:
+            output_path = self.storage_config["code_graph"]
+
         with open(output_path, "wb") as f:
             pickle.dump(graph, f)
-        
+
         print(f"Successfully built graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
         print(f"Graph saved to: {output_path}")
 
@@ -290,25 +297,32 @@ class GraphRetriever(BaseRetriever):
         return list(relevant_files)
 
 
-class GraphBasedAgent:
+class GraphBasedAgent(BaseAgent):
     """Main Graph-Based Retrieval Agent."""
-    
-    def __init__(self):
+
+    def __init__(self, repo_path: str = None):
         load_dotenv()
-        self.config = load_config()
+        super().__init__(name="Graph-Based Retrieval")
         self.llm_config = self.config["llm"]
         self.storage_config = self.config["storage"]
         self.provider = self.llm_config.get("provider")
         self.response_generator = ResponseGenerator(prototype_name="Graph-Based Retrieval")
+        self.repo_path = repo_path or os.environ.get("REPO_PATH")
+        if self.repo_path:
+            ensure_project_storage(self.repo_path)
     
     def _load_graph(self):
         """Load the knowledge graph from disk."""
-        graph_path = self.storage_config["code_graph"]
+        if self.repo_path:
+            graph_path = get_project_file_path(self.repo_path, "code_graph.gpickle")
+        else:
+            graph_path = self.storage_config["code_graph"]
+
         if not os.path.exists(graph_path):
             print(f"Error: Graph file not found at {graph_path}")
             print("Please run with --build-graph first to create the knowledge graph.")
             return None
-        
+
         with open(graph_path, "rb") as f:
             return pickle.load(f)
     
@@ -326,19 +340,15 @@ class GraphBasedAgent:
             return False
         
         print(f"Using repository at: {repo_path}")
-        
+
         # Build graph
-        graph_builder = GraphBuilder(self.config)
+        graph_builder = GraphBuilder(self.config, repo_path=repo_path)
         graph = graph_builder.build_graph(repo_path)
         graph_builder.save_graph(graph)
         
         return True
     
-    def run(self, question):
-        """Run the Graph-Based retrieval agent with the given question."""
-        print("--- RAG-based Code Expert Agent (Graph-Based Retrieval) ---")
-        
-        # Step 1: Check if graph exists, build if needed
+    def prepare(self, question: str) -> None:
         print("--- Knowledge Graph Setup ---")
         graph_path = self.storage_config["code_graph"]
         if not os.path.exists(graph_path):
@@ -346,35 +356,19 @@ class GraphBasedAgent:
             success = self.build_graph()
             if not success:
                 return
-        
-        # Load the graph
+
+    def retrieve(self, question: str):
+        # Load the graph and retrieve documents
         graph = self._load_graph()
         if graph is None:
-            return
-        
+            return []
         print(f"Loaded graph with {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
-        
-        # Step 2: Create graph retriever
         print("--- Creating Graph Retriever ---")
         retriever = GraphRetriever(graph)
-        
-        # Step 3: Agent Orchestration
-        print("--- Agent Orchestration ---")
-        
-        # Get relevant documents from graph
+        print("--- Retrieval ---")
         docs = retriever.invoke(question)
         print(f"Retrieved {len(docs)} documents from graph search.")
-        
-        if not docs:
-            print("No relevant documents found for the query.")
-            return
-        
-        # Use unified response generator (same as other agents)
-        from shared import UnifiedResponseGenerator
-        unified_generator = UnifiedResponseGenerator(self.config, prototype_name="Graph-Based Retrieval")
-        unified_generator.generate_response_with_context(question, docs)
-        
-        print("--- System Finished ---")
+        return docs
 
 
 def main():
@@ -390,11 +384,12 @@ def main():
     setup_and_pull_models(config)
     
     # Set repo path for data ingestion
+    repo_path = args.repo or os.environ.get("REPO_PATH")
     if args.repo:
         os.environ["REPO_PATH"] = args.repo
-    
+
     # Create agent
-    agent = GraphBasedAgent()
+    agent = GraphBasedAgent(repo_path=repo_path)
     
     if args.build_graph:
         # Build the knowledge graph

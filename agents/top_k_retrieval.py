@@ -35,16 +35,20 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Import shared services and central data ingestion
 from shared import WCAService, ResponseGenerator, load_config, setup_and_pull_models, data_ingestion_main
+from shared.base_agent import BaseAgent
+from shared.storage_manager import get_project_file_path, ensure_project_storage
 
 
 class TopKVectorizer:
     """Handles vectorization for Top-K retrieval strategy."""
 
-    def __init__(self, config):
+    def __init__(self, config, repo_path: str = None):
         self.config = config
         self.storage_config = config["storage"]
         self.embedding_config = config["embeddings"]
         self.retrieval_config = config["retrieval"]
+        self.llm_config = config["llm"]
+        self.repo_path = repo_path
 
     def create_retriever(self):
         """Create ParentDocumentRetriever with text splitting."""
@@ -58,11 +62,21 @@ class TopKVectorizer:
         # Create text splitter for child documents
         child_splitter = RecursiveCharacterTextSplitter(chunk_size=400)
 
+        # Get vector store path (use project storage if repo_path provided)
+        if self.repo_path:
+            vector_store_path = get_project_file_path(self.repo_path, "vector_store")
+        else:
+            vector_store_path = self.storage_config["vector_store"]
+
         # Create vectorstore
+        embedding_endpoint = self.llm_config.get("ollama_endpoint", "http://localhost:11434")
         vectorstore = Chroma(
             collection_name="split_parents",
-            persist_directory=self.storage_config["vector_store"],
-            embedding_function=OllamaEmbeddings(model=self.embedding_config["model"]),
+            persist_directory=vector_store_path,
+            embedding_function=OllamaEmbeddings(
+                model=self.embedding_config["model"],
+                base_url=embedding_endpoint
+            ),
         )
 
         # Create storage for parent documents
@@ -93,30 +107,15 @@ class TopKVectorizer:
         return retriever
 
 
-class TopKAgent:
-    """Main Top-K Retrieval Agent."""
+class TopKAgent(BaseAgent):
+    """Main Top-K Retrieval Agent using BaseAgent template."""
 
-    def __init__(self):
+    def __init__(self, repo_path: str = None):
         load_dotenv()
-        self.config = load_config()
-        self.llm_config = self.config["llm"]
-        self.provider = self.llm_config.get("provider")
-        self.response_generator = ResponseGenerator(prototype_name="Top-K Retrieval")
-
-    def _setup_provider(self):
-        """Setup LLM provider (WCA or Ollama)."""
-        if self.provider == "wca":
-            api_key = os.environ.get("WCA_API_KEY")
-            if not api_key:
-                raise ValueError("WCA_API_KEY not found in environment variables.")
-            return WCAService(api_key=api_key)
-        else:
-            return ChatOllama(
-                model=self.llm_config["ollama_model"],
-                temperature=0,
-                top_k=40,
-                top_p=0.9
-            )
+        super().__init__(name="Top-K Retrieval")
+        self.repo_path = repo_path or os.environ.get("REPO_PATH")
+        if self.repo_path:
+            ensure_project_storage(self.repo_path)
 
     def _classify_question_type(self, question):
         """Classify question to use appropriate prompt strategy."""
@@ -224,89 +223,19 @@ Analysis:"""
 
         return templates.get(question_type, templates['general'])
 
-    def _create_qa_chain(self, retriever):
-        """Create the QA chain for the agent."""
-        if self.provider == "wca":
-            # For WCA, we'll handle this differently in the run method
-            return retriever
-        else:
-            # For Ollama, create a proper chain with dynamic prompting
-            llm = self._setup_provider()
-
-            # We'll create the prompt dynamically in the run method
-            # For now, create a placeholder that will be replaced
-            template = """You are a senior software architect. Based on the following set of retrieved source files, produce a comprehensive analysis of the project that directly answers the user's question.
-
-Retrieved Documents (Context):
-{context}
-
-User's Question:
-{question}
-
-Architectural Analysis:"""
-
-            prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-
-            # Create document chain
-            combine_docs_chain = StuffDocumentsChain(
-                llm_chain=LLMChain(llm=llm, prompt=prompt),
-                document_variable_name="context"
-            )
-
-            # Create question generator
-            question_generator = LLMChain(
-                llm=llm,
-                prompt=PromptTemplate(
-                    template="Given the following conversation and a follow up question, "
-                    "rephrase the follow up question to be a standalone question.\n\n"
-                    "Chat History:\n{chat_history}\n"
-                    "Follow Up Input: {question}\n"
-                    "Standalone question:",
-                    input_variables=["chat_history", "question"]
-                )
-            )
-
-            # Create conversational retrieval chain
-            qa = ConversationalRetrievalChain(
-                retriever=retriever,
-                combine_docs_chain=combine_docs_chain,
-                question_generator=question_generator,
-                return_source_documents=True,
-            )
-
-            return qa
-
-    def run(self, question):
-        """Run the Top-K retrieval agent with the given question."""
-        print("--- RAG-based Code Expert Agent (Top-K Retrieval) ---")
-
-        # Step 1: Data Ingestion
+    def prepare(self, question: str) -> None:
+        # Ensure raw documents exist by running central ingestion
         print("--- Data Ingestion ---")
         data_ingestion_main()
 
-        # Step 2: Vectorization
+    def retrieve(self, question: str):
         print("--- Vectorization ---")
-        vectorizer = TopKVectorizer(self.config)
+        vectorizer = TopKVectorizer(self.config, repo_path=self.repo_path)
         retriever = vectorizer.create_retriever()
-
-        # Step 3: Agent Orchestration
-        print("--- Agent Orchestration ---")
-
-        # Get top-k documents
-        top_k = self.config["retrieval"]["top_k"]
+        print("--- Retrieval ---")
         docs = retriever.invoke(question)
         print(f"Retrieved {len(docs)} documents.")
-
-        if not docs:
-            print("No relevant documents found for the query.")
-            return
-
-        # Use unified response generator for any provider
-        from shared import UnifiedResponseGenerator
-        unified_generator = UnifiedResponseGenerator(self.config, prototype_name="Top-K Retrieval")
-        unified_generator.generate_response_with_context(question, docs)
-
-        print("--- System Finished ---")
+        return docs
 
 
 def main():
@@ -339,11 +268,12 @@ def main():
     setup_and_pull_models(config)
 
     # Set repo path for data ingestion
+    repo_path = args.repo or os.environ.get("REPO_PATH")
     if args.repo:
         os.environ["REPO_PATH"] = args.repo
 
     # Run the agent
-    agent = TopKAgent()
+    agent = TopKAgent(repo_path=repo_path)
     agent.run(args.question)
 
 

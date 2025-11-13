@@ -11,16 +11,21 @@ repository:
 # 2. Language Model (LLM) Provider Settings
 # Choose the provider for generating answers.
 # Options: "ollama", "openai", "claude", "gemini", "wca"
+# Provider and model settings read from .env file
 llm:
-  provider: "wca"
+  provider: ${LLM_PROVIDER:ollama}
 
   # Provider-specific model settings
   models:
-    ollama: "granite3.2:8b"
+    ollama: ${OLLAMA_MODEL:granite3.2:8b}
     openai: "gpt-4"
     claude: "claude-3-sonnet-20240229"
     gemini: "gemini-pro"
     wca: "watsonx-code-assistant"
+
+  # Ollama endpoint (read from .env via OLLAMA_ENDPOINT)
+  # Example: http://clutchbox.local:11434 or http://localhost:11434
+  ollama_endpoint: ${OLLAMA_ENDPOINT:http://localhost:11434}
 
   # Generation parameters
   temperature: 0.1

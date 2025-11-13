@@ -43,18 +43,21 @@ from langchain.schema.document import Document
 # Import shared services and central data ingestion
 from shared import WCAService, ResponseGenerator, load_config, setup_and_pull_models, data_ingestion_main
 from shared.llm_providers import get_llm_provider
+from shared.base_agent import BaseAgent
+from shared.storage_manager import get_project_file_path, ensure_project_storage
 
 
 
 class RepresentationBuilder:
     """Builds multiple representations of documents for enhanced retrieval."""
-    
-    def __init__(self, config):
+
+    def __init__(self, config, repo_path: str = None):
         load_dotenv()
         self.config = config
         self.llm_config = config["llm"]
         self.storage_config = config["storage"]
         self.provider = self.llm_config.get("provider")
+        self.repo_path = repo_path
     
     def _setup_provider(self):
         """Setup LLM provider (WCA or Ollama)."""
@@ -66,8 +69,10 @@ class RepresentationBuilder:
         else:
             # Use ChatOllama with correct config path
             model = self.llm_config["models"][self.provider]
+            base_url = self.llm_config.get("ollama_endpoint", "http://localhost:11434")
             return ChatOllama(
                 model=model,
+                base_url=base_url,
                 temperature=0,
                 top_k=40,
                 top_p=0.9
@@ -138,7 +143,7 @@ Questions:"""
                     summary = wca_service.extract_generated_text(summary_resp) or "No summary available"
 
                     questions_resp = wca_service.generate_hypothetical_questions(file_path, content)
-                    questions_text = wca_service.extract_generated_text(questions_resp) or ""
+                    questions_text = wca_service.extract_generated_text(questions_resp) or "No questions generated"
                     questions = [q.strip() for q in questions_text.split('\n') if q.strip()]
                 else:
                     # Use Ollama
@@ -158,7 +163,11 @@ Questions:"""
                 continue
         
         # Save representations
-        output_path = self.storage_config["multi_representations"]
+        if self.repo_path:
+            output_path = get_project_file_path(self.repo_path, "multi_representations.pkl")
+        else:
+            output_path = self.storage_config["multi_representations"]
+
         with open(output_path, "wb") as f:
             pickle.dump(representations, f)
         
@@ -170,18 +179,24 @@ Questions:"""
 
 class MultiRepresentationVectorizer:
     """Creates vectorized multi-representation index."""
-    
-    def __init__(self, config):
+
+    def __init__(self, config, repo_path: str = None):
         self.config = config
         self.storage_config = config["storage"]
         self.embedding_config = config["embeddings"]
+        self.llm_config = config["llm"]
+        self.repo_path = repo_path
     
     def create_retriever(self):
         """Create MultiVectorRetriever for multi-representation indexing."""
         print("Creating multi-representation vectorization...")
-        
+
         # Load multi-representation documents
-        multi_repr_path = self.storage_config["multi_representations"]
+        if self.repo_path:
+            multi_repr_path = get_project_file_path(self.repo_path, "multi_representations.pkl")
+        else:
+            multi_repr_path = self.storage_config["multi_representations"]
+
         try:
             with open(multi_repr_path, "rb") as f:
                 representations = pickle.load(f)
@@ -189,12 +204,21 @@ class MultiRepresentationVectorizer:
             print(f"Error: {multi_repr_path} not found.")
             print("Please run with --build-representations first.")
             return None
-        
+
         # Create vectorstore
+        if self.repo_path:
+            vector_store_path = get_project_file_path(self.repo_path, "vector_store")
+        else:
+            vector_store_path = self.storage_config["vector_store"]
+
+        embedding_endpoint = self.llm_config.get("ollama_endpoint", "http://localhost:11434")
         vectorstore = Chroma(
             collection_name="multi_representation",
-            persist_directory=self.storage_config["vector_store"],
-            embedding_function=OllamaEmbeddings(model=self.embedding_config["model"]),
+            persist_directory=vector_store_path,
+            embedding_function=OllamaEmbeddings(
+                model=self.embedding_config["model"],
+                base_url=embedding_endpoint
+            ),
         )
         
         # Create storage for original documents
@@ -254,89 +278,22 @@ class MultiRepresentationVectorizer:
         return retriever
 
 
-class MultiRepresentationAgent:
-    """Main Multi-Representation Agent."""
-    
-    def __init__(self):
+class MultiRepresentationAgent(BaseAgent):
+    """Main Multi-Representation Agent (subclasses BaseAgent)."""
+
+    def __init__(self, repo_path: str = None):
         load_dotenv()
-        self.config = load_config()
-        self.llm_config = self.config["llm"]
+        super().__init__(name="Multi-Representation Indexing")
         self.storage_config = self.config["storage"]
         self.retrieval_config = self.config["retrieval"]
-        self.provider = self.llm_config.get("provider")
-        self.response_generator = ResponseGenerator(prototype_name="Multi-Representation Indexing")
-    
-    def _setup_provider(self):
-        """Setup LLM provider (WCA or Ollama)."""
-        if self.provider == "wca":
-            api_key = os.environ.get("WCA_API_KEY")
-            if not api_key:
-                raise ValueError("WCA_API_KEY not found in environment variables.")
-            return WCAService(api_key=api_key)
-        else:
-            # Use ChatOllama with correct config path
-            model = self.llm_config["models"][self.provider]
-            return ChatOllama(
-                model=model,
-                temperature=0,
-                top_k=40,
-                top_p=0.9
-            )
-    
-    def _create_qa_chain(self, retriever):
-        """Create the QA chain for the agent."""
-        if self.provider == "wca":
-            # For WCA, we'll handle this differently in the run method
-            return retriever
-        else:
-            # For Ollama, create a proper chain
-            llm = self._setup_provider()
-            
-            # Create prompt template
-            template = """You are a senior software architect. Based on the following set of retrieved source files, produce a comprehensive analysis of the project that directly answers the user's question.
+        self._user_strategy = 'specific'
+        self.repo_path = repo_path or os.environ.get("REPO_PATH")
+        if self.repo_path:
+            ensure_project_storage(self.repo_path)
 
-Retrieved Documents (Context):
-{context}
-
-User's Question:
-{question}
-
-Architectural Analysis:"""
-            
-            prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-            
-            # Create document chain
-            combine_docs_chain = StuffDocumentsChain(
-                llm_chain=LLMChain(llm=llm, prompt=prompt),
-                document_variable_name="context"
-            )
-            
-            # Create question generator
-            question_generator = LLMChain(
-                llm=llm,
-                prompt=PromptTemplate(
-                    template="Given the following conversation and a follow up question, "
-                    "rephrase the follow up question to be a standalone question.\n\n"
-                    "Chat History:\n{chat_history}\n"
-                    "Follow Up Input: {question}\n"
-                    "Standalone question:",
-                    input_variables=["chat_history", "question"]
-                )
-            )
-            
-            # Create conversational retrieval chain
-            qa = ConversationalRetrievalChain(
-                retriever=retriever,
-                combine_docs_chain=combine_docs_chain,
-                question_generator=question_generator,
-                return_source_documents=True,
-            )
-            
-            return qa
-    
     def build_representations(self):
         """Build multi-representations."""
-        builder = RepresentationBuilder(self.config)
+        builder = RepresentationBuilder(self.config, repo_path=self.repo_path)
         return builder.build_representations()
     
     def _analyze_question_features(self, question):
@@ -439,69 +396,37 @@ Architectural Analysis:"""
         return retriever
     
     def run(self, question, strategy='specific'):
-        """Run the Multi-Representation agent with the given question and strategy."""
-        print(f"--- RAG-based Code Expert Agent (Multi-Representation, Strategy: {strategy}) ---")
-        
-        # Step 1: Check if representations exist, build if needed
+        """Run while preserving CLI signature; delegate to BaseAgent template."""
+        self._user_strategy = strategy
+        return super().run(question)
+
+    def prepare(self, question: str) -> None:
         print("--- Multi-Representation Setup ---")
-        representations_path = self.storage_config["multi_representations"]
+        if self.repo_path:
+            representations_path = get_project_file_path(self.repo_path, "multi_representations.pkl")
+        else:
+            representations_path = self.storage_config["multi_representations"]
+
         if not os.path.exists(representations_path):
             print("Multi-representations not found. Building automatically...")
             print("This will take a while as it processes each file with the LLM...")
             success = self.build_representations()
             if not success:
                 return
-        
-        # Step 2: Vectorization
-        print("--- Vectorization ---")
-        vectorizer = MultiRepresentationVectorizer(self.config)
-        retriever = vectorizer.create_retriever()
-        
-        if retriever is None:
-            return
-        
-        # Step 2: Configure retrieval based on adaptive strategy selection
-        optimal_strategy = self._select_optimal_strategy(question, strategy)
-        retriever = self._configure_retriever_with_strategy(retriever, optimal_strategy)
-        
-        print(f"Using {optimal_strategy['name']} strategy with k={optimal_strategy['k']}")
-        
-        # Step 3: Agent Orchestration
-        print("--- Agent Orchestration ---")
-        if self.provider == "wca":
-            # For WCA, use the service directly
-            wca_service = self._setup_provider()
-            
-            # Get relevant documents
-            docs = retriever.invoke(question)
-            print(f"Retrieved {len(docs)} documents using {strategy} strategy.")
-            
-            if not docs:
-                print("No relevant documents found for the query.")
-                return
-            
-            # Get analysis from WCA
-            print("Sending query to WCA...")
-            try:
-                wca_response = wca_service.get_architectural_analysis(question, docs)
-                answer_text = wca_service.extract_generated_text(wca_response) or "No response"
 
-                qa_result = {
-                    "question": question,
-                    "answer": answer_text,
-                    "source_documents": docs
-                }
-                
-                self.response_generator.generate_response(qa_result)
-                
-            except Exception as e:
-                print(f"Error calling WCA API: {e}")
-        else:
-            # For Ollama, use the chain
-            qa_chain = self._create_qa_chain(retriever)
-            self.response_generator.process_query(qa_chain, question)
-        
-        print("--- System Finished ---")
+    def retrieve(self, question: str):
+        print("--- Vectorization ---")
+        vectorizer = MultiRepresentationVectorizer(self.config, repo_path=self.repo_path)
+        retriever = vectorizer.create_retriever()
+        if retriever is None:
+            return []
+        optimal_strategy = self._select_optimal_strategy(question, self._user_strategy)
+        retriever = self._configure_retriever_with_strategy(retriever, optimal_strategy)
+        print(f"Using {optimal_strategy['name']} strategy with k={optimal_strategy['k']}")
+        print("--- Retrieval ---")
+        docs = retriever.invoke(question)
+        print(f"Retrieved {len(docs)} documents using {self._user_strategy} strategy.")
+        return docs
 
 
 def main():
@@ -519,11 +444,12 @@ def main():
     config = load_config()
     
     # Set repo path for data ingestion
+    repo_path = args.repo or os.environ.get("REPO_PATH")
     if args.repo:
         os.environ["REPO_PATH"] = args.repo
-    
+
     # Create agent
-    agent = MultiRepresentationAgent()
+    agent = MultiRepresentationAgent(repo_path=repo_path)
     
     if args.build_representations:
         # Build the representations

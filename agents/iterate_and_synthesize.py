@@ -30,19 +30,26 @@ from langchain.chains import LLMChain
 
 # Import shared services and central data ingestion
 from shared import WCAService, ResponseGenerator, load_config, setup_and_pull_models, data_ingestion_main
+from shared.base_agent import BaseAgent
+from shared.storage_manager import get_project_file_path, ensure_project_storage
 
 
 
-class IterateAndSynthesizeAgent:
-    """Main Iterate and Synthesize Agent."""
-    
-    def __init__(self):
+class IterateAndSynthesizeAgent(BaseAgent):
+    """Main Iterate and Synthesize Agent (subclasses BaseAgent)."""
+
+    def __init__(self, repo_path: str = None):
         load_dotenv()
-        self.config = load_config()
+        super().__init__(name="Iterate & Synthesize")
         self.llm_config = self.config["llm"]
         self.storage_config = self.config["storage"]
         self.provider = self.llm_config.get("provider")
         self.response_generator = ResponseGenerator(prototype_name="Iterate & Synthesize")
+
+        # Get repo path from environment or parameter
+        self.repo_path = repo_path or os.environ.get("REPO_PATH")
+        if self.repo_path:
+            ensure_project_storage(self.repo_path)
     
     def _setup_provider(self):
         """Setup LLM provider (WCA or Ollama)."""
@@ -54,8 +61,10 @@ class IterateAndSynthesizeAgent:
         else:
             # Use ChatOllama with correct config path
             model = self.llm_config["models"][self.provider]
+            base_url = self.llm_config.get("ollama_endpoint", "http://localhost:11434")
             return ChatOllama(
                 model=model,
+                base_url=base_url,
                 temperature=0,
                 top_k=40,
                 top_p=0.9
@@ -163,43 +172,53 @@ Architectural Analysis:"""
             print(f"Error synthesizing summaries: {e}")
             return "Error generating final analysis."
     
-    def run(self, question):
-        """Run the Iterate and Synthesize agent with the given question."""
-        print("--- RAG-based Code Expert Agent (Iterate and Synthesize) ---")
-        
-        # Step 1: Data Ingestion
+    def prepare(self, question: str) -> None:
+        # Ensure ingestion has been run
         print("--- Data Ingestion ---")
         data_ingestion_main()
-        
-        # Step 2: Load all documents
+
+    def retrieve(self, question: str):
+        # For this agent, retrieval = load all documents
         print("--- Loading Documents ---")
         raw_docs_path = self.storage_config["raw_docs"]
         with open(raw_docs_path, "rb") as f:
             documents = pickle.load(f)
-        
         print(f"Loaded {len(documents)} documents for analysis.")
-        
-        # Step 3: Process all files and synthesize
+        return documents
+
+    def _save_comprehensive_analysis(self, analysis: str) -> None:
+        """Save comprehensive analysis to project storage."""
+        if not self.repo_path:
+            return
+
+        try:
+            file_path = get_project_file_path(self.repo_path, "comprehensive_analysis.pkl")
+            with open(file_path, "wb") as f:
+                pickle.dump(analysis, f)
+            print(f"Comprehensive analysis saved to {file_path}")
+        except Exception as e:
+            print(f"Warning: Could not save comprehensive analysis: {e}")
+
+    def analyze(self, question: str, documents):
         print("--- File Analysis and Synthesis ---")
-        
         if self.provider == "wca":
             wca_service = self._setup_provider()
             final_analysis = self._process_all_files_wca(documents, wca_service)
         else:
             llm = self._setup_provider()
             final_analysis = self._process_all_files_ollama(documents, llm)
-        
-        # Step 4: Generate response
+
+        # Save comprehensive analysis for later querying
+        self._save_comprehensive_analysis(final_analysis)
+
         print("--- Response Generation ---")
         qa_result = {
             "question": question,
             "answer": final_analysis,
-            "source_documents": documents  # All documents are source documents
+            "source_documents": documents
         }
-        
         self.response_generator.generate_response(qa_result)
-        
-        print("--- System Finished ---")
+        return qa_result
 
 
 def main():
@@ -214,11 +233,12 @@ def main():
     setup_and_pull_models(config)
     
     # Set repo path for data ingestion
+    repo_path = args.repo or os.environ.get("REPO_PATH")
     if args.repo:
         os.environ["REPO_PATH"] = args.repo
-    
+
     # Run the agent
-    agent = IterateAndSynthesizeAgent()
+    agent = IterateAndSynthesizeAgent(repo_path=repo_path)
     agent.run(args.question)
 
 

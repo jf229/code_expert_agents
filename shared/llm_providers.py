@@ -125,11 +125,16 @@ class GeminiProvider(LLMProvider):
 
 
 class OllamaProvider(LLMProvider):
-    """Ollama local provider."""
-    
-    def __init__(self, model: str = "granite3.2:8b"):
+    """Ollama local or remote provider."""
+
+    def __init__(self, model: str = "granite3.2:8b", endpoint: str = None):
         self.model = model
-        self.base_url = "http://localhost:11434/api/generate"
+        # Use provided endpoint, or get from environment, fallback to localhost
+        if endpoint:
+            base_endpoint = endpoint
+        else:
+            base_endpoint = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+        self.base_url = f"{base_endpoint}/api/generate"
     
     def generate_response(self, prompt: str, **kwargs) -> str:
         """Generate response using Ollama API."""
@@ -170,18 +175,23 @@ class WCAProvider(LLMProvider):
                     "chat_session_id": str(__import__('uuid').uuid4())
                 }
             }
-            
+
             response = self.wca_service._call_wca_api(payload)
-            
+
             # Extract the response text from WCA's response format
-            if (response and 'response' in response and 
-                'message' in response['response'] and 
+            if (response and 'response' in response and
+                'message' in response['response'] and
                 'content' in response['response']['message']):
                 return response['response']['message']['content']
-            
-            # Fallback if the structure is unexpected
-            return str(response)
-                
+
+            # Fallback to WCAService's robust extraction for other formats
+            extracted = self.wca_service.extract_generated_text(response)
+            if extracted:
+                return extracted
+
+            # Final fallback if extraction fails
+            return "No response generated"
+
         except Exception as e:
             raise Exception(f"WCA API error: {e}")
 
